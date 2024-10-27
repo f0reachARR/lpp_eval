@@ -7,6 +7,7 @@ from typing import List, Tuple
 
 TEST_DOCKER_IMAGE = os.getenv("TEST_DOCKER_IMAGE")
 TEST_TEMP_DIR = Path(os.getenv("TEST_TEMP_DIR", "/tmp")).resolve()
+BUILD_OUT_MAP = {"01": "tc", "02": "pp", "03": "cr", "04": "mpplc"}
 
 
 def _call_container(target_path: Path, args: List[str], timeout=30):
@@ -76,13 +77,13 @@ class TestResult:
 
 
 def run_tests(
-    target_path: Path, test_dir: str, timeout=30, include_cases: List[str] = []
+    target_path: Path, testsuite: str, timeout=30, include_cases: List[str] = []
 ) -> TestResult:
     TEST_TEMP_DIR.mkdir(parents=True, exist_ok=True)
 
     cmd = [
         "lpptest",
-        test_dir,
+        testsuite,
         "--json-report",
         "--json-report-file=/lpp/data/result.json",
     ]
@@ -106,3 +107,12 @@ def run_tests(
         result_summary.append((case_name, test["outcome"]))
 
     return TestResult(result_summary, stdout)
+
+
+def run_raw_output(target_path: Path, testsuite: str, input: str, timeout=30) -> str:
+    TEST_TEMP_DIR.mkdir(parents=True, exist_ok=True)
+
+    cmd = [
+        f"/workspaces/{BUILD_OUT_MAP[testsuite]}",
+        testsuite,
+    ]
