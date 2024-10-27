@@ -19,6 +19,7 @@ from eval import run_extract, run_tests
 REDMINE_URL = os.getenv("REDMINE_URL")
 REDMINE_API_KEY = os.getenv("REDMINE_API_KEY")
 OUTPUT_DIR = Path(os.getenv("OUTPUT_DIR", "./output"))
+LIMITED_CASES = os.getenv("LIMITED_CASES", "").split(",")
 
 redmine = Redmine(REDMINE_URL, key=REDMINE_API_KEY)
 
@@ -83,7 +84,7 @@ if __name__ == "__main__":
             print(f"Root: {root}")
             best_result = (None, "", 0)
             for test_name in test_names:
-                result = run_tests(root, test_name)
+                result = run_tests(root, test_name, include_cases=LIMITED_CASES)
                 passed_count = len([r for r in result.summary if r[1] == "passed"])
                 print(f"{test_name}: {passed_count}/{len(result.summary)}")
                 if passed_count >= best_result[2]:
@@ -93,19 +94,22 @@ if __name__ == "__main__":
                 f"Best test: {best_result[1]} ({best_result[2]}/{len(result.summary)})"
             )
 
+            best_result_name = best_result[1]
+            best_result_info = best_result[0]
+
             test_results = root / "test_results"
             testpairs = create_testcase_result_pair(best_result[1], test_results)
 
             report_file = file_dir / "report.html"
-            logs_json = json.dumps(best_result[0].stdout)
+            logs_json = json.dumps(best_result_info.stdout)
             rendered = render(
                 "testcase.jinja2",
                 {
                     "project_id": project_id,
                     "testcase_id": best_result[1],
                     "passed": best_result[2],
-                    "total": len(best_result[0].summary),
-                    "testcase_summary": [(s, r) for s, r in best_result[0].summary],
+                    "total": len(best_result_info.summary),
+                    "testcase_summary": [(s, r) for s, r in best_result_info.summary],
                     "logs": logs_json,
                     "testpairs": testpairs,
                 },

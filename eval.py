@@ -75,7 +75,9 @@ class TestResult:
     stdout: str
 
 
-def run_tests(target_path: Path, test_dir: str, timeout=30) -> TestResult:
+def run_tests(
+    target_path: Path, test_dir: str, timeout=30, include_cases: List[str] = []
+) -> TestResult:
     TEST_TEMP_DIR.mkdir(parents=True, exist_ok=True)
 
     cmd = [
@@ -84,6 +86,10 @@ def run_tests(target_path: Path, test_dir: str, timeout=30) -> TestResult:
         "--json-report",
         "--json-report-file=/lpp/data/result.json",
     ]
+
+    if len(include_cases) > 0:
+        cmd.append("-k")
+        cmd.append(" or ".join(include_cases))
 
     (returncode, stdout, stderr) = _call_container(target_path, cmd, timeout)
 
