@@ -1,0 +1,33 @@
+
+<html>
+<head>
+<meta charSet="utf-8"/>
+<link rel="stylesheet" href="https://unpkg.com/chota@latest"/>
+<script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.min.js"></script>
+<link href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.min.css" rel="stylesheet" />
+<title>Report for {{ project_id }}</title>
+</head>
+<body>
+<div class="container">
+<h1>Report for {{ project_id }}</h1>
+<p>Testcase: {{ testcase_id }}</p>
+<p>Summary: {{ passed }}  / {{ total }}</p>
+
+<dl>
+{% for key, value in testcase_summary %}
+  <dt>{{ key }}</dt>
+  <dd>{{ value }}</dd>
+{% endfor %}
+</dl>
+
+<h2>Logs</h2>
+<div id="terminal"></div>
+<script>
+  var term = new Terminal();
+  term.open(document.getElementById('terminal'));
+  term.write(JSON.parse('{{ logs }}'));
+</script>
+
+</div>
+</body>
+</html>

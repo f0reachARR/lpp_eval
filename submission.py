@@ -1,4 +1,7 @@
+import json
 from dotenv import load_dotenv
+
+from tmpl import render
 
 load_dotenv()
 
@@ -80,4 +83,22 @@ if __name__ == "__main__":
                 if passed_count > best_result[2]:
                     best_result = (result, test_name, passed_count)
 
-            print(f"Best test: {best_result[0]} ({best_result[2]}/{len(result)})")
+            print(
+                f"Best test: {best_result[1]} ({best_result[2]}/{len(result.summary)})"
+            )
+
+            report_file = file_dir / "report.html"
+            logs_json = json.dumps(best_result[0].stdout)
+            rendered = render(
+                "testcase.jinja2",
+                {
+                    "project_id": project_id,
+                    "testcase_id": best_result[1],
+                    "passed": best_result[2],
+                    "total": len(best_result[0].summary),
+                    "testcase_summary": [(s, r) for s, r in best_result[0].summary],
+                    "logs": logs_json,
+                },
+            )
+
+            report_file.write_text(rendered)
