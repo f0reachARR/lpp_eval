@@ -1,6 +1,7 @@
 import json
 from dotenv import load_dotenv
 
+from testcases import create_testcase_result_pair
 from tmpl import render
 
 load_dotenv()
@@ -50,9 +51,14 @@ if __name__ == "__main__":
 
         # 最後の添付ファイルを取得
         latest_attachment_id = None
-        for journal in detailed_issue.journals:
+        # ソート
+        journals = sorted(detailed_issue.journals, key=lambda x: x.created_on)
+        for journal in journals:
             for detail in journal.details:
-                if detail["property"] == "attachment":
+                if (
+                    detail["property"] == "attachment"
+                    and detail["new_value"] is not None
+                ):
                     latest_attachment_id = detail["name"]
 
         if latest_attachment_id is None:
@@ -62,7 +68,7 @@ if __name__ == "__main__":
             continue
 
         latest_attachment = redmine.attachment.get(latest_attachment_id)
-        print(f"{report_type} {latest_attachment.filename}")
+        print(f"{project_id} {report_type} {latest_attachment.filename}")
 
         file_dir = OUTPUT_DIR / project_id / report_type
         shutil.rmtree(file_dir, ignore_errors=True)
@@ -87,6 +93,9 @@ if __name__ == "__main__":
                 f"Best test: {best_result[1]} ({best_result[2]}/{len(result.summary)})"
             )
 
+            test_results = root / "test_results"
+            testpairs = create_testcase_result_pair(best_result[1], test_results)
+
             report_file = file_dir / "report.html"
             logs_json = json.dumps(best_result[0].stdout)
             rendered = render(
@@ -98,6 +107,7 @@ if __name__ == "__main__":
                     "total": len(best_result[0].summary),
                     "testcase_summary": [(s, r) for s, r in best_result[0].summary],
                     "logs": logs_json,
+                    "testpairs": testpairs,
                 },
             )
 
