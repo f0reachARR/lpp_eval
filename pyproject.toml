@@ -1,0 +1,14 @@
+[project]
+name = "lpp-eval"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "lpp-collector",
+    "python-dotenv>=1.0.1",
+    "python-redmine>=2.5.0",
+]
+
+[tool.uv.sources]
+lpp-collector = { git = "https://github.com/f0reachARR/lpp_test.git" }
