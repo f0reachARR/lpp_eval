@@ -80,7 +80,7 @@ if __name__ == "__main__":
                 result = run_tests(root, test_name)
                 passed_count = len([r for r in result.summary if r[1] == "passed"])
                 print(f"{test_name}: {passed_count}/{len(result.summary)}")
-                if passed_count > best_result[2]:
+                if passed_count >= best_result[2]:
                     best_result = (result, test_name, passed_count)
 
             print(
