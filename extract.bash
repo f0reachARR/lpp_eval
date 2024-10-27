@@ -7,7 +7,7 @@ FILE_DESC=$(file $INPUT)
 
 if [[ $FILE_DESC == *"Zip archive data"* ]]; then
     echo "Extracting $INPUT"
-    unzip $INPUT
+    unzip -o $INPUT
 elif [[ $FILE_DESC == *"gzip compressed data"* ]]; then
     echo "Extracting $INPUT"
     gunzip $INPUT

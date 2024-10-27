@@ -72,8 +72,12 @@ if __name__ == "__main__":
             # Extract source code
             root = run_extract(file_dir)
             print(f"Root: {root}")
-            best_result = None
+            best_result = (None, 0)
             for test_name in test_names:
                 result = run_tests(root, test_name)
-                passed_count = len([r for r in result if r[0] == "passed"])
+                passed_count = len([r for r in result if r[1] == "passed"])
                 print(f"{test_name}: {passed_count}/{len(result)}")
+                if passed_count > best_result[1]:
+                    best_result = (test_name, passed_count)
+
+            print(f"Best test: {best_result[0]} ({best_result[1]}/{len(result)})")

@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 import json
 import os
 from pathlib import Path
@@ -40,13 +41,13 @@ def _call_container(target_path: Path, args: List[str], timeout=30):
     )
 
 
-def run_extract(target_path: Path, timeout=30) -> Path:
+def run_extract(target_path: Path) -> Path:
     cmd = [
         "bash",
         "/extract.bash",
     ]
 
-    _call_container(target_path, cmd, timeout)
+    _call_container(target_path, cmd, timeout=10)
 
     # Determine root directory of source code
     ## Step1. Find Makefile in root or sub directory
@@ -68,7 +69,13 @@ def run_extract(target_path: Path, timeout=30) -> Path:
     return c_files_dir[0]
 
 
-def run_tests(target_path: Path, test_dir: str, timeout=30) -> List[Tuple[str, str]]:
+@dataclass
+class TestResult:
+    summary: List[Tuple[str, str]]
+    stdout: str
+
+
+def run_tests(target_path: Path, test_dir: str, timeout=30) -> TestResult:
     TEST_TEMP_DIR.mkdir(parents=True, exist_ok=True)
 
     cmd = [
@@ -92,4 +99,4 @@ def run_tests(target_path: Path, test_dir: str, timeout=30) -> List[Tuple[str, s
         case_name = nodeid.split("::")[-1]
         result_summary.append((case_name, test["outcome"]))
 
-    return result_summary
+    return TestResult(result_summary, stdout)
