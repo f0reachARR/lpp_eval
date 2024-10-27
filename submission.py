@@ -4,7 +4,9 @@ import re
 from typing import Dict, List, Literal
 from redminelib import Redmine
 from redminelib.resources import Issue
-from pprint import pprint
+from dotenv import load_dotenv
+
+load_dotenv()
 
 REDMINE_URL = os.getenv("REDMINE_URL")
 REDMINE_API_KEY = os.getenv("REDMINE_API_KEY")
