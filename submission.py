@@ -1,12 +1,16 @@
-import os
-from pathlib import Path
-import re
-from typing import Dict, List, Literal
-from redminelib import Redmine
-from redminelib.resources import Issue
 from dotenv import load_dotenv
 
 load_dotenv()
+
+import os
+from pathlib import Path
+import re
+import shutil
+from typing import Dict, List
+from redminelib import Redmine
+from redminelib.resources import Issue
+from eval import run_extract, run_tests
+
 
 REDMINE_URL = os.getenv("REDMINE_URL")
 REDMINE_API_KEY = os.getenv("REDMINE_API_KEY")
@@ -20,6 +24,9 @@ redmine = Redmine(REDMINE_URL, key=REDMINE_API_KEY)
 SUBJECT_MAP: Dict[str, str] = {
     "01.06 プログラムの提出": "program01",
     "01.07 レポートの提出": "report01",
+}
+TEST_MAP: Dict[str, List[str]] = {
+    "program01": ["01test", "01test_ex"],
 }
 PROJECT_REGEX = re.compile(r"言語処理プログラミング \((\d+)\)")
 
@@ -55,6 +62,18 @@ if __name__ == "__main__":
         print(f"{report_type} {latest_attachment.filename}")
 
         file_dir = OUTPUT_DIR / project_id / report_type
+        shutil.rmtree(file_dir, ignore_errors=True)
         file_dir.mkdir(parents=True, exist_ok=True)
+        file_dir = file_dir.resolve()
         latest_attachment.download(savepath=str(file_dir), filename="submission.bin")
-        # break
+
+        if report_type in TEST_MAP:
+            test_names = TEST_MAP[report_type]
+            # Extract source code
+            root = run_extract(file_dir)
+            print(f"Root: {root}")
+            best_result = None
+            for test_name in test_names:
+                result = run_tests(root, test_name)
+                passed_count = len([r for r in result if r[0] == "passed"])
+                print(f"{test_name}: {passed_count}/{len(result)}")
