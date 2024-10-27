@@ -36,7 +36,7 @@
     role="tabpanel" aria-labelledby="test-{{ testpair.name }}-tab" tabindex="0">
     <div class="row">
         <div class="col border m-1">
-            <pre>{{ testpair.test_input }}</pre>
+            <pre>{{ testpair.test_expect_stdout }}</pre>
         </div>
         <div class="col border m-1">
             <pre>{{ testpair.test_output }}</pre>
@@ -44,10 +44,10 @@
     </div>
      <div class="row">
         <div class="col border m-1">
-            <pre>{{ testpair.test_expect_stderr }}</pre>
+            <pre>{{ testpair.test_input }}</pre>
         </div>
         <div class="col border m-1">
-            <pre>{{ testpair.test_expect_stdout }}</pre>
+            <pre>{{ testpair.test_expect_stderr }}</pre>
         </div>
     </div>
 </div>

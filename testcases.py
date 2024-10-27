@@ -41,10 +41,10 @@ def create_testcase_result_pair(testsuite: str, result_dir: Path) -> List[Testca
         pairs.append(
             TestcasePair(
                 basename,
-                test_input,
-                test_output,
-                test_expect_stdout,
-                test_expect_stderr,
+                test_input=test_input,
+                test_output=test_output,
+                test_expect_stdout=test_expect_stdout,
+                test_expect_stderr=test_expect_stderr,
             )
         )
 
