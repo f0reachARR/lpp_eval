@@ -193,13 +193,14 @@ wheels = [
 
 [[package]]
 name = "lpp-collector"
-version = "0.1.5"
-source = { git = "https://github.com/f0reachARR/lpp_test.git#d8c217c4b50c04e004f9846c46d7032d20f68863" }
+version = "0.1.6"
+source = { git = "https://github.com/f0reachARR/lpp_test.git#1803493b5660b5827f4e47862f15b7e5d555579b" }
 dependencies = [
     { name = "argcomplete" },
     { name = "attrs" },
     { name = "httpx" },
     { name = "pytest" },
+    { name = "pytest-json-report" },
     { name = "pytest-timeout" },
     { name = "python-dateutil" },
     { name = "whiptail-dialogs" },
@@ -325,6 +326,31 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/4b/24/7d1f2d2537de114bdf1e6875115113ca80091520948d370c964b88070af2/pytest-6.2.5.tar.gz", hash = "sha256:131b36680866a76e6781d13f101efb86cf674ebb9762eb70d3082b6f29889e89", size = 1118720 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/40/76/86f886e750b81a4357b6ed606b2bcf0ce6d6c27ad3c09ebf63ed674fc86e/pytest-6.2.5-py3-none-any.whl", hash = "sha256:7310f8d27bc79ced999e760ca304d69f6ba6c6649c0b60fb0e04a4a77cacc134", size = 280654 },
+]
+
+[[package]]
+name = "pytest-json-report"
+version = "1.5.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pytest" },
+    { name = "pytest-metadata" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/4f/d3/765dae9712fcd68d820338908c1337e077d5fdadccd5cacf95b9b0bea278/pytest-json-report-1.5.0.tar.gz", hash = "sha256:2dde3c647851a19b5f3700729e8310a6e66efb2077d674f27ddea3d34dc615de", size = 21241 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/81/35/d07400c715bf8a88aa0c1ee9c9eb6050ca7fe5b39981f0eea773feeb0681/pytest_json_report-1.5.0-py3-none-any.whl", hash = "sha256:9897b68c910b12a2e48dd849f9a284b2c79a732a8a9cb398452ddd23d3c8c325", size = 13222 },
+]
+
+[[package]]
+name = "pytest-metadata"
+version = "2.0.4"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pytest" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/4e/57/e26bd9b5caba5bfdb6b2916fcc875018c1c6ee80b159aee7acb19f8a81f1/pytest_metadata-2.0.4.tar.gz", hash = "sha256:fcc653f65fe3035b478820b5284fbf0f52803622ee3f60a2faed7a7d3ba1f41e", size = 10485 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e1/00/c8175f054e801b5d8135ef2d0d7e4ad508c0af94d81e521431c23cf56e8f/pytest_metadata-2.0.4-py3-none-any.whl", hash = "sha256:acb739f89fabb3d798c099e9e0c035003062367a441910aaaf2281bc1972ee14", size = 9875 },
 ]
 
 [[package]]

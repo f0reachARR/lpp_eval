@@ -69,7 +69,9 @@ if __name__ == "__main__":
             continue
 
         latest_attachment = redmine.attachment.get(latest_attachment_id)
-        print(f"{project_id} {report_type} {latest_attachment.filename}")
+        print(
+            f"{project_id} {report_type} {latest_attachment.filename} ({latest_attachment.created_on})"
+        )
 
         file_dir = OUTPUT_DIR / project_id / report_type
         shutil.rmtree(file_dir, ignore_errors=True)
@@ -81,6 +83,8 @@ if __name__ == "__main__":
             test_names = TEST_MAP[report_type]
             # Extract source code
             root = run_extract(file_dir)
+            test_results = root / "test_results"
+            shutil.rmtree(test_results, ignore_errors=True)
             print(f"Root: {root}")
             best_result = (None, "", 0)
             for test_name in test_names:
@@ -97,8 +101,9 @@ if __name__ == "__main__":
             best_result_name = best_result[1]
             best_result_info = best_result[0]
 
-            test_results = root / "test_results"
             testpairs = create_testcase_result_pair(best_result[1], test_results)
+            # sort by name
+            testpairs.sort(key=lambda x: x.name)
 
             report_file = file_dir / "report.html"
             logs_json = json.dumps(best_result_info.stdout)
