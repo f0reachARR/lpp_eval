@@ -45,6 +45,7 @@ class SummaryItem:
     passed: int
     total: int
     failed: str
+    timestamp: str
 
 
 if __name__ == "__main__":
@@ -142,6 +143,7 @@ if __name__ == "__main__":
             passed=best_result[2],
             total=len(best_result_info.summary),
             failed=",".join([s for s, r in best_result_info.summary if r == "failed"]),
+            timestamp=str(latest_attachment.created_on),
         )
 
         summary_list.append(summary)
