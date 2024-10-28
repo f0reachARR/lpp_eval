@@ -5,8 +5,10 @@ from pathlib import Path
 import subprocess
 from typing import List, Tuple
 
-TEST_DOCKER_IMAGE = os.getenv("TEST_DOCKER_IMAGE")
-TEST_TEMP_DIR = Path(os.getenv("TEST_TEMP_DIR", "/tmp")).resolve()
+TEST_DOCKER_IMAGE = os.getenv(
+    "TEST_DOCKER_IMAGE", "ghcr.io/f0reacharr/lpp_test_eval:latest"
+)
+TEST_TEMP_DIR = Path(os.getenv("TEST_TEMP_DIR", "./tmp")).resolve()
 BUILD_OUT_MAP = {"01": "tc", "02": "pp", "03": "cr", "04": "mpplc"}
 
 
