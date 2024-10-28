@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 import json
 from dotenv import load_dotenv
 
@@ -35,8 +36,20 @@ TEST_MAP: Dict[str, List[str]] = {
 }
 PROJECT_REGEX = re.compile(r"言語処理プログラミング \((\d+)\)")
 
+
+@dataclass
+class SummaryItem:
+    project_id: str
+    type_id: str
+    testcase_id: str
+    passed: int
+    total: int
+    failed: str
+
+
 if __name__ == "__main__":
     issues: List[Issue] = redmine.issue.filter(status_id=4, tracker_id=15)
+    summary_list: List[SummaryItem] = []
     for issue in issues:
         detailed_issue: Issue = redmine.issue.get(issue.id, include=["journals"])
         project_name: str = detailed_issue.project.name
@@ -79,45 +92,66 @@ if __name__ == "__main__":
         file_dir = file_dir.resolve()
         latest_attachment.download(savepath=str(file_dir), filename="submission.bin")
 
-        if report_type in TEST_MAP:
-            test_names = TEST_MAP[report_type]
-            # Extract source code
-            root = run_extract(file_dir)
-            test_results = root / "test_results"
-            shutil.rmtree(test_results, ignore_errors=True)
-            print(f"Root: {root}")
-            best_result = (None, "", 0)
-            for test_name in test_names:
-                result = run_tests(root, test_name, include_cases=LIMITED_CASES)
-                passed_count = len([r for r in result.summary if r[1] == "passed"])
-                print(f"{test_name}: {passed_count}/{len(result.summary)}")
-                if passed_count >= best_result[2]:
-                    best_result = (result, test_name, passed_count)
+        if report_type not in TEST_MAP:
+            continue
 
-            print(
-                f"Best test: {best_result[1]} ({best_result[2]}/{len(result.summary)})"
-            )
+        test_names = TEST_MAP[report_type]
+        # Extract source code
+        root = run_extract(file_dir)
+        test_results = root / "test_results"
+        shutil.rmtree(test_results, ignore_errors=True)
+        print(f"Root: {root}")
+        best_result = (None, "", 0)
+        for test_name in test_names:
+            result = run_tests(root, test_name, include_cases=LIMITED_CASES)
+            passed_count = len([r for r in result.summary if r[1] == "passed"])
+            print(f"{test_name}: {passed_count}/{len(result.summary)}")
+            if passed_count >= best_result[2]:
+                best_result = (result, test_name, passed_count)
 
-            best_result_name = best_result[1]
-            best_result_info = best_result[0]
+        print(f"Best test: {best_result[1]} ({best_result[2]}/{len(result.summary)})")
 
-            testpairs = create_testcase_result_pair(best_result[1], test_results)
-            # sort by name
-            testpairs.sort(key=lambda x: x.name)
+        best_result_name = best_result[1]
+        best_result_info = best_result[0]
 
-            report_file = file_dir / "report.html"
-            logs_json = json.dumps(best_result_info.stdout)
-            rendered = render(
-                "testcase.jinja2",
-                {
-                    "project_id": project_id,
-                    "testcase_id": best_result[1],
-                    "passed": best_result[2],
-                    "total": len(best_result_info.summary),
-                    "testcase_summary": [(s, r) for s, r in best_result_info.summary],
-                    "logs": logs_json,
-                    "testpairs": testpairs,
-                },
-            )
+        testpairs = create_testcase_result_pair(best_result[1], test_results)
+        # sort by name
+        testpairs.sort(key=lambda x: x.name)
 
-            report_file.write_text(rendered)
+        report_file = file_dir / "report.html"
+        logs_json = json.dumps(best_result_info.stdout)
+        rendered = render(
+            "testcase.jinja2",
+            {
+                "project_id": project_id,
+                "testcase_id": best_result_name,
+                "passed": best_result[2],
+                "total": len(best_result_info.summary),
+                "testcase_summary": [(s, r) for s, r in best_result_info.summary],
+                "logs": logs_json,
+                "testpairs": testpairs,
+            },
+        )
+
+        report_file.write_text(rendered)
+
+        summary = SummaryItem(
+            project_id=project_id,
+            type_id=report_type,
+            testcase_id=best_result_name,
+            passed=best_result[2],
+            total=len(best_result_info.summary),
+            failed=",".join([s for s, r in best_result_info.summary if r == "failed"]),
+        )
+
+        summary_list.append(summary)
+
+    summary_file = OUTPUT_DIR / "index.html"
+    rendered = render(
+        "summary.jinja2",
+        {
+            "rows": summary_list,
+        },
+    )
+
+    summary_file.write_text(rendered)
