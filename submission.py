@@ -1,8 +1,8 @@
 import json
 from dotenv import load_dotenv
 
-from testcases import create_testcase_result_pair
-from tmpl import render
+from lpp_eval.testcases import create_testcase_result_pair
+from lpp_eval.tmpl import render
 
 load_dotenv()
 
@@ -13,7 +13,7 @@ import shutil
 from typing import Dict, List
 from redminelib import Redmine
 from redminelib.resources import Issue
-from eval import run_extract, run_tests
+from lpp_eval.runner.test_runner import run_extract, run_tests
 
 
 REDMINE_URL = os.getenv("REDMINE_URL")

@@ -2,12 +2,12 @@ from dataclasses import dataclass
 import json
 import os
 from pathlib import Path
+import random
+import string
 import subprocess
 from typing import List, Tuple
 
-TEST_DOCKER_IMAGE = os.getenv("TEST_DOCKER_IMAGE")
-TEST_TEMP_DIR = Path(os.getenv("TEST_TEMP_DIR", "/tmp")).resolve()
-BUILD_OUT_MAP = {"01": "tc", "02": "pp", "03": "cr", "04": "mpplc"}
+from lpp_eval.config import TEST_DOCKER_IMAGE, TEST_TEMP_DIR
 
 
 def _call_container(target_path: Path, args: List[str], timeout=30):
@@ -81,11 +81,14 @@ def run_tests(
 ) -> TestResult:
     TEST_TEMP_DIR.mkdir(parents=True, exist_ok=True)
 
+    result_filename = "".join(random.choice(string.ascii_lowercase) for _ in range(16))
+    result_local_path = Path(TEST_TEMP_DIR / f"{result_filename}.json")
+
     cmd = [
         "lpptest",
         testsuite,
         "--json-report",
-        "--json-report-file=/lpp/data/result.json",
+        f"--json-report-file=/lpp/data/{result_filename}.json",
     ]
 
     if len(include_cases) > 0:
@@ -97,22 +100,14 @@ def run_tests(
     if returncode != 0:
         raise Exception(f"Test failed: {returncode} {stdout} {stderr}")
 
-    result_text = Path(TEST_TEMP_DIR / "result.json").read_text()
+    result_text = result_local_path.read_text()
+    result_local_path.unlink()
     result_json = json.loads(result_text)
 
     result_summary = []
     for test in result_json["tests"]:
-        nodeid = test["nodeid"]
+        nodeid: str = test["nodeid"]
         case_name = nodeid.split("::")[-1]
         result_summary.append((case_name, test["outcome"]))
 
     return TestResult(result_summary, stdout)
-
-
-def run_raw_output(target_path: Path, testsuite: str, input: str, timeout=30) -> str:
-    TEST_TEMP_DIR.mkdir(parents=True, exist_ok=True)
-
-    cmd = [
-        f"/workspaces/{BUILD_OUT_MAP[testsuite]}",
-        testsuite,
-    ]
