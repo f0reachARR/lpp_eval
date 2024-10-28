@@ -20,6 +20,7 @@
       <th scope="col">Status</th>
       <th scope="col">Fails</th>
       <th scope="col">TS (UTC)</th>
+      <th scope="col">Misc</th>
     </tr>
   </thead>
   <tbody>
@@ -31,6 +32,7 @@
       <td>{{ row.passed }} / {{ row.total }}</td>
       <td>{{ row.failed }}</td>
       <td>{{ row.timestamp }}</td>
+      <td>{{ row.other_info }}</td>
     </tr>
     {% endfor %}
   </tbody>

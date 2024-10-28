@@ -46,6 +46,7 @@ class SummaryItem:
     total: int
     failed: str
     timestamp: str
+    other_info: str = ""
 
 
 if __name__ == "__main__":
@@ -103,10 +104,12 @@ if __name__ == "__main__":
         shutil.rmtree(test_results, ignore_errors=True)
         print(f"Root: {root}")
         best_result = (None, "", 0)
+        all_result: List[str] = []
         for test_name in test_names:
             result = run_tests(root, test_name, include_cases=LIMITED_CASES)
             passed_count = len([r for r in result.summary if r[1] == "passed"])
             print(f"{test_name}: {passed_count}/{len(result.summary)}")
+            all_result.append(f"{test_name} ({passed_count}/{len(result.summary)})")
             if passed_count >= best_result[2]:
                 best_result = (result, test_name, passed_count)
 
@@ -144,6 +147,7 @@ if __name__ == "__main__":
             total=len(best_result_info.summary),
             failed=",".join([s for s, r in best_result_info.summary if r == "failed"]),
             timestamp=str(latest_attachment.created_on),
+            other_info=" | ".join(all_result),
         )
 
         summary_list.append(summary)
