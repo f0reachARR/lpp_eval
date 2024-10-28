@@ -29,6 +29,7 @@ def _call_container(target_path: Path, args: List[str], timeout=30):
         f"TARGET_GID={os.getgid()}",
         "--memory=512m",
         "--cpus=0.5",
+        "--network=none",
         TEST_DOCKER_IMAGE,
         *args,
     ]
