@@ -26,7 +26,7 @@
     {% for row in rows %}
     <tr>
       <td>{{ row.project_id }}</td>
-      <td><a href="/{{ row.project_id }}/{{ row.type_id }}/report.html">{{ row.type_id }}</a></td>
+      <td><a href="./{{ row.project_id }}/{{ row.type_id }}/report.html">{{ row.type_id }}</a></td>
       <td>{{ row.testcase_id }}</td>
       <td>{{ row.passed }} / {{ row.total }}</td>
       <td>{{ row.failed }}</td>
