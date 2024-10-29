@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import datetime
 import json
 import os
 from pathlib import Path
@@ -84,11 +85,13 @@ def run_tests(
 ) -> TestResult:
     TEST_TEMP_DIR.mkdir(parents=True, exist_ok=True)
 
+    result_filename = f"{datetime.now().timestamp()}.json"
+
     cmd = [
         "lpptest",
         testsuite,
         "--json-report",
-        "--json-report-file=/lpp/data/result.json",
+        f"--json-report-file=/lpp/data/{result_filename}",
     ]
 
     if len(include_cases) > 0:
@@ -100,7 +103,8 @@ def run_tests(
     if returncode != 0:
         raise Exception(f"Test failed: {returncode} {stdout} {stderr}")
 
-    result_text = Path(TEST_TEMP_DIR / "result.json").read_text()
+    result_path = Path(TEST_TEMP_DIR / {result_filename})
+    result_text = result_path.read_text()
     result_json = json.loads(result_text)
 
     result_summary = []
