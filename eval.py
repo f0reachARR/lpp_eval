@@ -103,7 +103,7 @@ def run_tests(
     if returncode != 0:
         raise Exception(f"Test failed: {returncode} {stdout} {stderr}")
 
-    result_path = Path(TEST_TEMP_DIR / {result_filename})
+    result_path = Path(TEST_TEMP_DIR / result_filename)
     result_text = result_path.read_text()
     result_path.unlink()
     result_json = json.loads(result_text)
