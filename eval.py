@@ -105,6 +105,7 @@ def run_tests(
 
     result_path = Path(TEST_TEMP_DIR / {result_filename})
     result_text = result_path.read_text()
+    result_path.unlink()
     result_json = json.loads(result_text)
 
     result_summary = []
