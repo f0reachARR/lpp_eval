@@ -99,7 +99,12 @@ if __name__ == "__main__":
 
         test_names = TEST_MAP[report_type]
         # Extract source code
-        root = run_extract(file_dir)
+        try:
+            root = run_extract(file_dir)
+        except Exception as e:
+            print(f"Failed to extract source code: {e}. Skipping...")
+            continue
+
         test_results = root / "test_results"
         shutil.rmtree(test_results, ignore_errors=True)
         print(f"Root: {root}")
