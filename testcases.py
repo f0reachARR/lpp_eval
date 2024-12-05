@@ -8,9 +8,14 @@ TEST_CASE_DIR = Path(lpp_collector.__file__).parent / "testcases"
 
 
 def get_testcase(testsuite: str, basename: str):
-    testsuite_dir = f"input{testsuite[0:2]}"
-    path = TEST_CASE_DIR / testsuite_dir / f"{basename}.mpl"
-    return path.read_text()
+    testcase_num = int(testsuite[1:2])
+    # num = 2 -> dir target are input02, input01
+    targets = [f"input{str(i).zfill(2)}" for i in range(1, testcase_num + 1)]
+    for target in targets:
+        path = TEST_CASE_DIR / target / f"{basename}.mpl"
+        if path.exists():
+            return path.read_text()
+    raise FileNotFoundError(f"Testcase {basename} not found in {testsuite}")
 
 
 def get_testcase_expect(testsuite: str, basename: str, type: str):
