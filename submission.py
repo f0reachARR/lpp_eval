@@ -29,7 +29,7 @@ redmine = Redmine(REDMINE_URL, key=REDMINE_API_KEY)
 
 SUBJECT_MAP: Dict[str, str] = {
     "01.06 プログラムの提出": "program01",
-    "01.07 レポートの提出": "report01",
+    # "01.07 レポートの提出": "report01",
     "02.06 プログラムの提出": "program02",
 }
 TEST_MAP: Dict[str, List[str]] = {
