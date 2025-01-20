@@ -32,7 +32,7 @@ SUBJECT_MAP: Dict[str, str] = {
     # "01.07 レポートの提出": "report01",
     "02.06 プログラムの提出": "program02",
     "03.06 プログラムの提出": "program03",
-    "04.06 プログラムの提出": "program03",
+    "04.06 プログラムの提出": "program04",
 }
 TEST_MAP: Dict[str, List[str]] = {
     "program01": ["01test", "01test_ex"],
