@@ -80,7 +80,9 @@ if __name__ == "__main__":
                 if (
                     detail["property"] == "attachment"
                     and detail["new_value"] is not None
+                    and detail["new_value"].endswith(".zip")
                 ):
+                    print(detail)
                     latest_attachment_id = detail["name"]
 
         if latest_attachment_id is None:
@@ -89,7 +91,11 @@ if __name__ == "__main__":
             )
             continue
 
-        latest_attachment = redmine.attachment.get(latest_attachment_id)
+        try:
+            latest_attachment = redmine.attachment.get(latest_attachment_id)
+        except Exception as e:
+            print(f"Failed to get attachment: {e}. Skipping...")
+            continue
         print(
             f"{project_id} {report_type} {latest_attachment.filename} ({latest_attachment.created_on})"
         )

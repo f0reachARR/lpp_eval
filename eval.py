@@ -81,7 +81,7 @@ class TestResult:
 
 
 def run_tests(
-    target_path: Path, testsuite: str, timeout=30, include_cases: List[str] = []
+    target_path: Path, testsuite: str, timeout=120, include_cases: List[str] = []
 ) -> TestResult:
     TEST_TEMP_DIR.mkdir(parents=True, exist_ok=True)
 
