@@ -29,16 +29,35 @@ redmine = Redmine(REDMINE_URL, key=REDMINE_API_KEY)
 
 SUBJECT_MAP: Dict[str, str] = {
     "01.06 プログラムの提出": "program01",
-    # "01.07 レポートの提出": "report01",
+    "01.07 レポートの提出": "report01",
     "02.06 プログラムの提出": "program02",
+    "02.07 レポートの提出": "report02",
     "03.06 プログラムの提出": "program03",
+    "03.07 レポートの提出": "report03",
     "04.06 プログラムの提出": "program04",
+    "04.07 レポートの提出": "report04",
+}
+EXT_MAP = {
+    "program01": ".bin",
+    "report01": ".pdf",
+    "program02": ".bin",
+    "report02": ".pdf",
+    "program03": ".bin",
+    "report03": ".pdf",
+    "program04": ".bin",
+    "report04": ".pdf",
 }
 TEST_MAP: Dict[str, List[str]] = {
     "program01": ["01test", "01test_ex"],
     "program02": ["02test"],
     "program03": ["03test"],
     "program04": ["04test"],
+}
+REPORT_MAP: Dict[str, str] = {
+    "program01": "report01",
+    "program02": "report02",
+    "program03": "report03",
+    "program04": "report04",
 }
 PROJECT_REGEX = re.compile(r"言語処理プログラミング \((\d+)\)")
 
@@ -52,11 +71,12 @@ class SummaryItem:
     total: int
     failed: str
     timestamp: str
-    other_info: str = ""
+    other_info: str
+    report_id: str
 
 
 if __name__ == "__main__":
-    issues: List[Issue] = redmine.issue.filter(status_id=4, tracker_id=15)
+    issues: List[Issue] = redmine.issue.filter(tracker_id=15)
     summary_list: List[SummaryItem] = []
     for issue in issues:
         detailed_issue: Issue = redmine.issue.get(issue.id, include=["journals"])
@@ -77,11 +97,16 @@ if __name__ == "__main__":
         journals = sorted(detailed_issue.journals, key=lambda x: x.created_on)
         for journal in journals:
             for detail in journal.details:
-                if (
+                is_valid = (
                     detail["property"] == "attachment"
                     and detail["new_value"] is not None
-                    and detail["new_value"].endswith(".zip")
-                ):
+                    and (
+                        detail["new_value"].endswith(".zip")
+                        if report_type in REPORT_MAP
+                        else detail["new_value"].endswith(".pdf")
+                    )
+                )
+                if is_valid:
                     print(detail)
                     latest_attachment_id = detail["name"]
 
@@ -104,7 +129,8 @@ if __name__ == "__main__":
         shutil.rmtree(file_dir, ignore_errors=True)
         file_dir.mkdir(parents=True, exist_ok=True)
         file_dir = file_dir.resolve()
-        latest_attachment.download(savepath=str(file_dir), filename="submission.bin")
+        ext = EXT_MAP[report_type]
+        latest_attachment.download(savepath=str(file_dir), filename=f"submission{ext}")
 
         if report_type not in TEST_MAP:
             continue
@@ -165,6 +191,7 @@ if __name__ == "__main__":
             failed=",".join([s for s, r in best_result_info.summary if r == "failed"]),
             timestamp=str(latest_attachment.created_on),
             other_info=" | ".join(all_result),
+            report_id=REPORT_MAP[report_type],
         )
 
         summary_list.append(summary)
