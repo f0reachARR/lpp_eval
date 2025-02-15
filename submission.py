@@ -35,7 +35,7 @@ SUBJECT_MAP: Dict[str, str] = {
     "03.06 プログラムの提出": "program03",
     "03.07 レポートの提出": "report03",
     "04.06 プログラムの提出": "program04",
-    "04.07 レポートの提出": "report04",
+    "04.07 最終レポートの提出": "report04",
 }
 EXT_MAP = {
     "program01": ".bin",
