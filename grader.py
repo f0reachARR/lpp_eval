@@ -323,3 +323,9 @@ def process_submissions() -> List[Submission]:
             continue
 
     return processed
+
+
+def get_submission_path(project_id: str, type_id: str) -> Path:
+    """Get the file path for a submission."""
+    ext = EXT_MAP.get(type_id, "")
+    return OUTPUT_DIR / project_id / type_id / f"submission{ext}"

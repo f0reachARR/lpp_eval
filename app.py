@@ -292,6 +292,22 @@ def api_refresh():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
+@app.route("/api/submission/<int:submission_id>/attachment", methods=["GET"])
+def api_get_submission_attachment(submission_id):
+    """Get the attachment file for a submission."""
+    submission = Submission.query.get_or_404(submission_id)
+    from grader import get_submission_path
+
+    file_path = get_submission_path(submission.project_id, submission.type_id)
+    if not file_path.exists():
+        return jsonify({"status": "error", "message": "Attachment not found"}), 404
+
+    # Send the file as an attachment
+    from flask import send_file
+
+    return send_file(str(file_path), as_attachment=True, download_name=file_path.name)
+
+
 if __name__ == "__main__":
     init_scheduler(app)
     atexit.register(shutdown_scheduler)
