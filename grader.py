@@ -20,10 +20,18 @@ REDMINE_API_KEY = os.getenv("REDMINE_API_KEY")
 OUTPUT_DIR = Path(os.getenv("OUTPUT_DIR", "./output"))
 LIMITED_CASES = os.getenv("LIMITED_CASES", "").split(",")
 
-# Deadline time of day (hour, minute) - applied to Redmine's due_date
-# Default: end of day (23:59) in UTC
-DEADLINE_HOUR = int(os.getenv("DEADLINE_HOUR", "23"))
-DEADLINE_MINUTE = int(os.getenv("DEADLINE_MINUTE", "59"))
+# Deadline configuration (UTC)
+# Format: "type_id": datetime(year, month, day, hour, minute, tzinfo=timezone.utc)
+DEADLINE_MAP: Dict[str, datetime] = {
+    "program01": datetime(2025, 5, 15, 15, 0, tzinfo=timezone.utc),  # Example: 2025-05-15 15:00 UTC
+    "program02": datetime(2025, 6, 15, 15, 0, tzinfo=timezone.utc),
+    "program03": datetime(2025, 7, 15, 15, 0, tzinfo=timezone.utc),
+    "program04": datetime(2025, 8, 15, 15, 0, tzinfo=timezone.utc),
+    "report01": datetime(2025, 5, 22, 15, 0, tzinfo=timezone.utc),
+    "report02": datetime(2025, 6, 22, 15, 0, tzinfo=timezone.utc),
+    "report03": datetime(2025, 7, 22, 15, 0, tzinfo=timezone.utc),
+    "report04": datetime(2025, 8, 22, 15, 0, tzinfo=timezone.utc),
+}
 
 SUBJECT_MAP: Dict[str, str] = {
     "01.06 プログラムの提出": "program01",
@@ -107,14 +115,9 @@ def get_attachment_info(
 
 
 def calculate_submission_timing(
-    deadline: Optional[datetime], submitted_at: datetime, first_submitted_at: datetime
+    type_id: str, submitted_at: datetime, first_submitted_at: datetime
 ) -> str:
     """Calculate submission timing classification.
-
-    Args:
-        deadline: The deadline datetime (from Redmine issue due_date)
-        submitted_at: Current submission datetime
-        first_submitted_at: First submission datetime
 
     Returns:
         'on_time': 期限内提出
@@ -122,6 +125,7 @@ def calculate_submission_timing(
         'late': 期限後の提出
         'unknown': 期限が設定されていない
     """
+    deadline = DEADLINE_MAP.get(type_id)
     if deadline is None:
         return "unknown"
 
@@ -130,8 +134,6 @@ def calculate_submission_timing(
         submitted_at = submitted_at.replace(tzinfo=timezone.utc)
     if first_submitted_at.tzinfo is None:
         first_submitted_at = first_submitted_at.replace(tzinfo=timezone.utc)
-    if deadline.tzinfo is None:
-        deadline = deadline.replace(tzinfo=timezone.utc)
 
     is_current_on_time = submitted_at <= deadline
     is_first_on_time = first_submitted_at <= deadline
@@ -183,23 +185,9 @@ def process_single_issue(redmine: Redmine, issue: Issue) -> Optional[Submission]
 
     print(f"Processing: {project_id} {report_type} {attachment.filename}")
 
-    # Get deadline from Redmine issue's due_date
-    deadline = None
-    if hasattr(detailed_issue, "due_date") and detailed_issue.due_date:
-        due_date = detailed_issue.due_date
-        # Convert date to datetime with configured time
-        deadline = datetime(
-            due_date.year,
-            due_date.month,
-            due_date.day,
-            DEADLINE_HOUR,
-            DEADLINE_MINUTE,
-            tzinfo=timezone.utc,
-        )
-
     # Calculate submission timing
     submission_timing = calculate_submission_timing(
-        deadline, submitted_at, first_submitted_at
+        report_type, submitted_at, first_submitted_at
     )
 
     # Create submission record
@@ -210,7 +198,6 @@ def process_single_issue(redmine: Redmine, issue: Issue) -> Optional[Submission]
         submitted_at=submitted_at,
         first_submitted_at=first_submitted_at,
         submission_timing=submission_timing,
-        deadline=deadline,
         status="running",
     )
     db.session.add(submission)

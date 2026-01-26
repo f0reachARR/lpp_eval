@@ -27,8 +27,6 @@ class Submission(db.Model):
     submission_timing = db.Column(db.String(20), default="unknown")
     # First submission timestamp for this project/type (to detect resubmission)
     first_submitted_at = db.Column(db.DateTime, nullable=True)
-    # Deadline from Redmine issue due_date
-    deadline = db.Column(db.DateTime, nullable=True)
 
     test_case_results = db.relationship(
         "TestCaseResult", backref="submission", lazy=True, cascade="all, delete-orphan"
