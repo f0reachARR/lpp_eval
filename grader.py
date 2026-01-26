@@ -182,7 +182,9 @@ def process_single_issue(redmine: Redmine, issue: Issue) -> Optional[Submission]
             result = run_tests(root, test_name, include_cases=LIMITED_CASES)
             passed_count = len([r for r in result.summary if r[1] == "passed"])
             print(f"{test_name}: {passed_count}/{len(result.summary)}")
-            all_result_info.append(f"{test_name} ({passed_count}/{len(result.summary)})")
+            all_result_info.append(
+                f"{test_name} ({passed_count}/{len(result.summary)})"
+            )
 
             if passed_count >= best_result[2]:
                 best_result = (result, test_name, passed_count, result.summary)
@@ -218,7 +220,9 @@ def process_single_issue(redmine: Redmine, issue: Issue) -> Optional[Submission]
         db.session.add(test_result)
 
     db.session.commit()
-    print(f"Completed: {project_id}/{report_type} - {best_result[2]}/{len(best_result[3])}")
+    print(
+        f"Completed: {project_id}/{report_type} - {best_result[2]}/{len(best_result[3])}"
+    )
 
     return submission
 
@@ -226,7 +230,7 @@ def process_single_issue(redmine: Redmine, issue: Issue) -> Optional[Submission]
 def process_submissions() -> List[Submission]:
     """Process all pending submissions from Redmine."""
     redmine = get_redmine_client()
-    issues: List[Issue] = redmine.issue.filter(tracker_id=15)
+    issues: List[Issue] = redmine.issue.filter(tracker_id=15, status_id="*")
     processed: List[Submission] = []
 
     for issue in issues:
