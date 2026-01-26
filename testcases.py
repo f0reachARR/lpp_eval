@@ -62,9 +62,9 @@ def create_testcase_result_pair(testsuite: str, result_dir: Path) -> List[Testca
 
 def shorten_testcase(name: str) -> str:
     if name.startswith("test_idempotency["):
-        return f"id[{name[16:-1]}]"
+        return f"id[{name[16:-1]}]".replace(".mpl", "").replace("sample", "")
     elif "[" in name and "]" in name:
         start = name.index("[")
         end = name.index("]")
-        return name[start + 1 : end]
+        return name[start + 1 : end].replace(".mpl", "").replace("sample", "")
     return name
