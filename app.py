@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from models import db, Submission, TestCaseResult
-from scheduler import init_scheduler, shutdown_scheduler
+from scheduler import init_scheduler, shutdown_scheduler, trigger_refresh, get_job_status
 
 app = Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv(
@@ -62,16 +62,19 @@ def api_submissions():
 
 @app.route("/api/refresh", methods=["POST"])
 def api_refresh():
-    """Manually trigger submission check."""
-    from grader import process_submissions
-
+    """Queue a submission check job (non-blocking)."""
     try:
-        processed = process_submissions()
-        return jsonify(
-            {"status": "success", "processed": len(processed)}
-        )
+        job_id = trigger_refresh()
+        return jsonify({"status": "queued", "job_id": job_id})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route("/api/refresh/<job_id>", methods=["GET"])
+def api_refresh_status(job_id):
+    """Check the status of a refresh job."""
+    status = get_job_status(job_id)
+    return jsonify(status)
 
 
 if __name__ == "__main__":

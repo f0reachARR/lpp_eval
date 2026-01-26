@@ -113,18 +113,56 @@
         }
 
         // Refresh functionality
+        let refreshJobId = null;
+        let refreshCheckInterval = null;
+
         function refreshSubmissions() {
+            const btn = document.querySelector('button[onclick="refreshSubmissions()"]');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Checking...';
+
             fetch('/api/refresh', { method: 'POST' })
                 .then(response => response.json())
                 .then(data => {
-                    if (data.status === 'success') {
-                        alert(`Processed ${data.processed} submission(s). Reloading...`);
-                        location.reload();
+                    if (data.status === 'queued') {
+                        refreshJobId = data.job_id;
+                        refreshCheckInterval = setInterval(checkRefreshStatus, 1000);
                     } else {
-                        alert('Error: ' + data.message);
+                        resetRefreshButton();
+                        alert('Error: ' + (data.message || 'Unknown error'));
                     }
                 })
-                .catch(err => alert('Request failed: ' + err));
+                .catch(err => {
+                    resetRefreshButton();
+                    alert('Request failed: ' + err);
+                });
+        }
+
+        function checkRefreshStatus() {
+            if (!refreshJobId) return;
+
+            fetch(`/api/refresh/${refreshJobId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'completed') {
+                        clearInterval(refreshCheckInterval);
+                        refreshJobId = null;
+                        resetRefreshButton();
+                        location.reload();
+                    }
+                })
+                .catch(err => {
+                    clearInterval(refreshCheckInterval);
+                    refreshJobId = null;
+                    resetRefreshButton();
+                    console.error('Status check failed:', err);
+                });
+        }
+
+        function resetRefreshButton() {
+            const btn = document.querySelector('button[onclick="refreshSubmissions()"]');
+            btn.disabled = false;
+            btn.innerHTML = 'Refresh';
         }
     </script>
 </body>
