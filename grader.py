@@ -2,7 +2,7 @@ import json
 import os
 import re
 import shutil
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
@@ -19,6 +19,11 @@ REDMINE_URL = os.getenv("REDMINE_URL")
 REDMINE_API_KEY = os.getenv("REDMINE_API_KEY")
 OUTPUT_DIR = Path(os.getenv("OUTPUT_DIR", "./output"))
 LIMITED_CASES = os.getenv("LIMITED_CASES", "").split(",")
+
+# Deadline time of day (hour, minute) - applied to Redmine's due_date
+# Default: end of day (23:59) in UTC
+DEADLINE_HOUR = int(os.getenv("DEADLINE_HOUR", "23"))
+DEADLINE_MINUTE = int(os.getenv("DEADLINE_MINUTE", "59"))
 
 SUBJECT_MAP: Dict[str, str] = {
     "01.06 プログラムの提出": "program01",
@@ -63,15 +68,20 @@ def get_redmine_client() -> Redmine:
     return Redmine(REDMINE_URL, key=REDMINE_API_KEY)
 
 
-def get_latest_attachment_info(
+def get_attachment_info(
     redmine: Redmine, issue: Issue, report_type: str
-) -> Optional[Tuple[str, datetime]]:
-    """Get the latest attachment ID and creation time for an issue."""
+) -> Optional[Tuple[str, datetime, datetime]]:
+    """Get the latest attachment ID, its creation time, and first attachment time for an issue.
+
+    Returns:
+        Tuple of (latest_attachment_id, latest_created_on, first_created_on) or None
+    """
     detailed_issue = redmine.issue.get(issue.id, include=["journals"])
     journals = sorted(detailed_issue.journals, key=lambda x: x.created_on)
 
     latest_attachment_id = None
     latest_created_on = None
+    first_created_on = None
 
     for journal in journals:
         for detail in journal.details:
@@ -87,11 +97,51 @@ def get_latest_attachment_info(
             if is_valid:
                 latest_attachment_id = detail["name"]
                 latest_created_on = journal.created_on
+                if first_created_on is None:
+                    first_created_on = journal.created_on
 
     if latest_attachment_id is None:
         return None
 
-    return latest_attachment_id, latest_created_on
+    return latest_attachment_id, latest_created_on, first_created_on
+
+
+def calculate_submission_timing(
+    deadline: Optional[datetime], submitted_at: datetime, first_submitted_at: datetime
+) -> str:
+    """Calculate submission timing classification.
+
+    Args:
+        deadline: The deadline datetime (from Redmine issue due_date)
+        submitted_at: Current submission datetime
+        first_submitted_at: First submission datetime
+
+    Returns:
+        'on_time': 期限内提出
+        'resubmission': 期限内提出後の再提出
+        'late': 期限後の提出
+        'unknown': 期限が設定されていない
+    """
+    if deadline is None:
+        return "unknown"
+
+    # Make datetimes timezone-aware if they aren't
+    if submitted_at.tzinfo is None:
+        submitted_at = submitted_at.replace(tzinfo=timezone.utc)
+    if first_submitted_at.tzinfo is None:
+        first_submitted_at = first_submitted_at.replace(tzinfo=timezone.utc)
+    if deadline.tzinfo is None:
+        deadline = deadline.replace(tzinfo=timezone.utc)
+
+    is_current_on_time = submitted_at <= deadline
+    is_first_on_time = first_submitted_at <= deadline
+
+    if is_current_on_time:
+        return "on_time"
+    elif is_first_on_time:
+        return "resubmission"
+    else:
+        return "late"
 
 
 def process_single_issue(redmine: Redmine, issue: Issue) -> Optional[Submission]:
@@ -111,13 +161,13 @@ def process_single_issue(redmine: Redmine, issue: Issue) -> Optional[Submission]
         print(f"Unknown report type: {detailed_issue.subject}")
         return None
 
-    attachment_info = get_latest_attachment_info(redmine, issue, report_type)
+    attachment_info = get_attachment_info(redmine, issue, report_type)
 
     if attachment_info is None:
         print(f"No attachment found for {report_type} (project: {project_name})")
         return None
 
-    attachment_id, submitted_at = attachment_info
+    attachment_id, submitted_at, first_submitted_at = attachment_info
 
     # Check if already processed
     existing = Submission.query.filter_by(attachment_id=attachment_id).first()
@@ -133,12 +183,34 @@ def process_single_issue(redmine: Redmine, issue: Issue) -> Optional[Submission]
 
     print(f"Processing: {project_id} {report_type} {attachment.filename}")
 
+    # Get deadline from Redmine issue's due_date
+    deadline = None
+    if hasattr(detailed_issue, "due_date") and detailed_issue.due_date:
+        due_date = detailed_issue.due_date
+        # Convert date to datetime with configured time
+        deadline = datetime(
+            due_date.year,
+            due_date.month,
+            due_date.day,
+            DEADLINE_HOUR,
+            DEADLINE_MINUTE,
+            tzinfo=timezone.utc,
+        )
+
+    # Calculate submission timing
+    submission_timing = calculate_submission_timing(
+        deadline, submitted_at, first_submitted_at
+    )
+
     # Create submission record
     submission = Submission(
         project_id=project_id,
         type_id=report_type,
         attachment_id=attachment_id,
         submitted_at=submitted_at,
+        first_submitted_at=first_submitted_at,
+        submission_timing=submission_timing,
+        deadline=deadline,
         status="running",
     )
     db.session.add(submission)

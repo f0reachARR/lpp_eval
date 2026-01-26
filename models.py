@@ -20,6 +20,15 @@ class Submission(db.Model):
     evaluated_at = db.Column(db.DateTime, default=datetime.utcnow)
     status = db.Column(db.String(20), default="pending")
     stdout = db.Column(db.Text, default="")
+    # Submission timing classification
+    # on_time: 期限内提出
+    # resubmission: 期限内提出後の再提出
+    # late: 期限後の提出
+    submission_timing = db.Column(db.String(20), default="unknown")
+    # First submission timestamp for this project/type (to detect resubmission)
+    first_submitted_at = db.Column(db.DateTime, nullable=True)
+    # Deadline from Redmine issue due_date
+    deadline = db.Column(db.DateTime, nullable=True)
 
     test_case_results = db.relationship(
         "TestCaseResult", backref="submission", lazy=True, cascade="all, delete-orphan"

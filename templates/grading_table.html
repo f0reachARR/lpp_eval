@@ -56,6 +56,22 @@
             max-height: 80vh;
             overflow: auto;
         }
+        .timing-on_time {
+            background-color: #d1e7dd;
+        }
+        .timing-resubmission {
+            background-color: #fff3cd;
+        }
+        .timing-late {
+            background-color: #f8d7da;
+        }
+        .timing-unknown {
+            background-color: #e9ecef;
+        }
+        .timing-badge {
+            font-size: 0.7rem;
+            padding: 2px 5px;
+        }
     </style>
 </head>
 <body>
@@ -77,9 +93,12 @@
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h2>{{ type_id }} - Grading Table</h2>
             <div>
-                <span class="badge bg-success me-2">Passed</span>
-                <span class="badge bg-danger me-2">Failed</span>
-                <span class="badge bg-secondary">Not Submitted</span>
+                <span class="badge bg-success me-2">○ Passed</span>
+                <span class="badge bg-danger me-2">× Failed</span>
+                <span class="badge bg-secondary me-3">- Not Submitted</span>
+                <span class="badge timing-on_time me-1">期限内</span>
+                <span class="badge timing-resubmission me-1">再提出</span>
+                <span class="badge timing-late">期限後</span>
             </div>
         </div>
 
@@ -89,6 +108,7 @@
                 <thead>
                     <tr>
                         <th class="project-header">Project ID</th>
+                        <th>Timing</th>
                         <th>Total</th>
                         {% for tc in testcase_list %}
                         <th class="testcase-header" title="{{ tc }}">{{ tc }}</th>
@@ -104,6 +124,21 @@
                             <a href="/submission/{{ data.submission.id }}">{{ project_id }}</a>
                             {% else %}
                             {{ project_id }}
+                            {% endif %}
+                        </td>
+                        <td class="timing-{{ data.submission.submission_timing if data else 'unknown' }}" style="text-align: center;">
+                            {% if data %}
+                                {% if data.submission.submission_timing == 'on_time' %}
+                                期限内
+                                {% elif data.submission.submission_timing == 'resubmission' %}
+                                再提出
+                                {% elif data.submission.submission_timing == 'late' %}
+                                期限後
+                                {% else %}
+                                -
+                                {% endif %}
+                            {% else %}
+                            未提出
                             {% endif %}
                         </td>
                         <td class="summary-cell">

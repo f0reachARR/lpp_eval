@@ -12,6 +12,10 @@
         .status-error { color: #dc3545; }
         .outcome-passed { color: #198754; font-weight: bold; }
         .outcome-failed { color: #dc3545; font-weight: bold; }
+        .timing-on_time { color: #198754; font-weight: bold; }
+        .timing-resubmission { color: #fd7e14; font-weight: bold; }
+        .timing-late { color: #dc3545; font-weight: bold; }
+        .timing-unknown { color: #6c757d; }
         pre.stdout {
             background-color: #1e1e1e;
             color: #d4d4d4;
@@ -61,6 +65,22 @@
                                 <th>Status:</th>
                                 <td><span class="status-{{ submission.status }}">{{ submission.status }}</span></td>
                             </tr>
+                            <tr>
+                                <th>Submission Timing:</th>
+                                <td>
+                                    <span class="timing-{{ submission.submission_timing }}">
+                                        {% if submission.submission_timing == 'on_time' %}
+                                        期限内提出
+                                        {% elif submission.submission_timing == 'resubmission' %}
+                                        再提出（期限内提出後）
+                                        {% elif submission.submission_timing == 'late' %}
+                                        期限後提出
+                                        {% else %}
+                                        不明
+                                        {% endif %}
+                                    </span>
+                                </td>
+                            </tr>
                         </table>
                     </div>
                     <div class="col-md-6">
@@ -77,7 +97,15 @@
                                 </td>
                             </tr>
                             <tr>
-                                <th>Submitted:</th>
+                                <th>Deadline:</th>
+                                <td>{{ submission.deadline.strftime('%Y-%m-%d %H:%M:%S') if submission.deadline else '-' }}</td>
+                            </tr>
+                            <tr>
+                                <th>First Submitted:</th>
+                                <td>{{ submission.first_submitted_at.strftime('%Y-%m-%d %H:%M:%S') if submission.first_submitted_at else '-' }}</td>
+                            </tr>
+                            <tr>
+                                <th>Current Submitted:</th>
                                 <td>{{ submission.submitted_at.strftime('%Y-%m-%d %H:%M:%S') if submission.submitted_at else '-' }}</td>
                             </tr>
                             <tr>
