@@ -95,14 +95,15 @@ def _run_sync_students_job():
         print("Scheduler error: Flask app not initialized")
         return
 
-    from grader import sync_students
+    with _app.app_context():
+        from grader import sync_students
 
-    print("Running student sync...")
-    try:
-        synced = sync_students()
-        print(f"Synced {len(synced)} students")
-    except Exception as e:
-        print(f"Scheduler error: {e}")
+        print("Running student sync...")
+        try:
+            synced = sync_students()
+            print(f"Synced {len(synced)} students")
+        except Exception as e:
+            print(f"Scheduler error: {e}")
 
 
 def shutdown_scheduler():
