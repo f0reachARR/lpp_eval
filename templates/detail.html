@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Submission Detail - {{ submission.project_id }}/{{ submission.type_id }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .status-completed { color: #198754; }
+        .status-running { color: #0d6efd; }
+        .status-pending { color: #6c757d; }
+        .status-error { color: #dc3545; }
+        .outcome-passed { color: #198754; font-weight: bold; }
+        .outcome-failed { color: #dc3545; font-weight: bold; }
+        pre.stdout {
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark bg-dark mb-4">
+        <div class="container">
+            <a href="/" class="navbar-brand">LPP Eval</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <nav aria-label="breadcrumb" class="mb-3">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/">Submissions</a></li>
+                <li class="breadcrumb-item active">{{ submission.project_id }}/{{ submission.type_id }}</li>
+            </ol>
+        </nav>
+
+        <div class="card mb-4">
+            <div class="card-header">
+                <h4 class="mb-0">Submission Information</h4>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <table class="table table-borderless">
+                            <tr>
+                                <th>Project ID:</th>
+                                <td>{{ submission.project_id }}</td>
+                            </tr>
+                            <tr>
+                                <th>Type:</th>
+                                <td>{{ submission.type_id }}</td>
+                            </tr>
+                            <tr>
+                                <th>Test Suite:</th>
+                                <td>{{ submission.testcase_id or '-' }}</td>
+                            </tr>
+                            <tr>
+                                <th>Status:</th>
+                                <td><span class="status-{{ submission.status }}">{{ submission.status }}</span></td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <table class="table table-borderless">
+                            <tr>
+                                <th>Result:</th>
+                                <td>
+                                    {% if submission.total > 0 %}
+                                        <strong>{{ submission.passed }} / {{ submission.total }}</strong>
+                                        ({{ (submission.passed / submission.total * 100) | round(1) }}%)
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Submitted:</th>
+                                <td>{{ submission.submitted_at.strftime('%Y-%m-%d %H:%M:%S') if submission.submitted_at else '-' }}</td>
+                            </tr>
+                            <tr>
+                                <th>Evaluated:</th>
+                                <td>{{ submission.evaluated_at.strftime('%Y-%m-%d %H:%M:%S') if submission.evaluated_at else '-' }}</td>
+                            </tr>
+                            <tr>
+                                <th>Attachment ID:</th>
+                                <td>{{ submission.attachment_id }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+
+                {% if submission.other_info %}
+                <div class="mt-3">
+                    <strong>Other Info:</strong>
+                    <p class="text-muted mb-0">{{ submission.other_info }}</p>
+                </div>
+                {% endif %}
+
+                {% if submission.failed %}
+                <div class="mt-3">
+                    <strong>Failed Tests:</strong>
+                    <p class="text-danger mb-0">{{ submission.failed }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if test_results %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h4 class="mb-0">Test Case Results</h4>
+            </div>
+            <div class="card-body">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Test Name</th>
+                            <th>Outcome</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for result in test_results %}
+                        <tr>
+                            <td>{{ result.name }}</td>
+                            <td class="outcome-{{ result.outcome }}">{{ result.outcome }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if submission.stdout %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h4 class="mb-0">Test Output</h4>
+            </div>
+            <div class="card-body">
+                <pre class="stdout">{{ submission.stdout }}</pre>
+            </div>
+        </div>
+        {% endif %}
+
+        <a href="/" class="btn btn-secondary mb-4">Back to List</a>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
