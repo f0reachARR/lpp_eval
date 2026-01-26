@@ -65,20 +65,24 @@
                                 <th>Status:</th>
                                 <td><span class="status-{{ submission.status }}">{{ submission.status }}</span></td>
                             </tr>
+                            {% set timing = calculate_timing(submission, deadline) %}
                             <tr>
                                 <th>Submission Timing:</th>
                                 <td>
-                                    <span class="timing-{{ submission.submission_timing }}">
-                                        {% if submission.submission_timing == 'on_time' %}
+                                    <span class="timing-{{ timing }}">
+                                        {% if timing == 'on_time' %}
                                         期限内提出
-                                        {% elif submission.submission_timing == 'resubmission' %}
+                                        {% elif timing == 'resubmission' %}
                                         再提出（期限内提出後）
-                                        {% elif submission.submission_timing == 'late' %}
+                                        {% elif timing == 'late' %}
                                         期限後提出
                                         {% else %}
                                         不明
                                         {% endif %}
                                     </span>
+                                    {% if deadline %}
+                                    <small class="text-muted">(期限: {{ deadline.strftime('%Y-%m-%d %H:%M') }})</small>
+                                    {% endif %}
                                 </td>
                             </tr>
                         </table>

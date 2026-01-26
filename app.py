@@ -5,8 +5,9 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from models import db, Submission, TestCaseResult
+from models import db, Submission, TestCaseResult, Deadline, calculate_submission_timing
 from scheduler import init_scheduler, shutdown_scheduler, trigger_refresh, get_job_status
+from datetime import datetime
 
 app = Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv(
@@ -18,6 +19,12 @@ db.init_app(app)
 
 with app.app_context():
     db.create_all()
+
+
+# Make calculate_submission_timing available in templates
+@app.context_processor
+def utility_processor():
+    return {"calculate_timing": calculate_submission_timing}
 
 
 @app.route("/")
@@ -32,8 +39,9 @@ def detail(submission_id):
     """Display detailed information for a single submission."""
     submission = Submission.query.get_or_404(submission_id)
     test_results = TestCaseResult.query.filter_by(submission_id=submission_id).all()
+    deadline = Deadline.get_deadline(submission.type_id)
     return render_template(
-        "detail.html", submission=submission, test_results=test_results
+        "detail.html", submission=submission, test_results=test_results, deadline=deadline
     )
 
 
@@ -103,13 +111,93 @@ def grading_table(type_id):
     # Get all project IDs (including those without submissions)
     project_ids = sorted(submission_results.keys())
 
+    # Get deadline for this type
+    deadline = Deadline.get_deadline(type_id)
+
     return render_template(
         "grading_table.html",
         type_id=type_id,
         testcase_list=testcase_list,
         project_ids=project_ids,
         submission_results=submission_results,
+        deadline=deadline,
     )
+
+
+@app.route("/deadlines")
+def deadlines():
+    """Display deadline management page."""
+    from grader import TEST_MAP, SUBJECT_MAP
+
+    # Get all type IDs (programs + reports)
+    all_types = list(TEST_MAP.keys()) + [
+        v for v in SUBJECT_MAP.values() if v.startswith("report")
+    ]
+    all_types = sorted(set(all_types))
+
+    # Get current deadlines
+    current_deadlines = Deadline.get_all_deadlines()
+
+    return render_template(
+        "deadlines.html",
+        all_types=all_types,
+        current_deadlines=current_deadlines,
+    )
+
+
+@app.route("/api/deadlines", methods=["GET"])
+def api_get_deadlines():
+    """Get all deadlines."""
+    deadlines = Deadline.query.all()
+    return jsonify(
+        [
+            {
+                "type_id": d.type_id,
+                "deadline": d.deadline.isoformat() if d.deadline else None,
+            }
+            for d in deadlines
+        ]
+    )
+
+
+@app.route("/api/deadlines/<type_id>", methods=["PUT"])
+def api_set_deadline(type_id):
+    """Set or update a deadline for a type."""
+    data = request.get_json()
+    if not data or "deadline" not in data:
+        return jsonify({"status": "error", "message": "deadline is required"}), 400
+
+    try:
+        deadline_str = data["deadline"]
+        # Parse ISO format datetime
+        deadline_dt = datetime.fromisoformat(deadline_str.replace("Z", "+00:00"))
+        # Store as naive UTC
+        if deadline_dt.tzinfo is not None:
+            deadline_dt = deadline_dt.replace(tzinfo=None)
+
+        # Upsert deadline
+        existing = Deadline.query.filter_by(type_id=type_id).first()
+        if existing:
+            existing.deadline = deadline_dt
+        else:
+            new_deadline = Deadline(type_id=type_id, deadline=deadline_dt)
+            db.session.add(new_deadline)
+
+        db.session.commit()
+        return jsonify({"status": "success", "type_id": type_id, "deadline": deadline_dt.isoformat()})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route("/api/deadlines/<type_id>", methods=["DELETE"])
+def api_delete_deadline(type_id):
+    """Delete a deadline for a type."""
+    existing = Deadline.query.filter_by(type_id=type_id).first()
+    if existing:
+        db.session.delete(existing)
+        db.session.commit()
+        return jsonify({"status": "success", "message": f"Deadline for {type_id} deleted"})
+    return jsonify({"status": "error", "message": "Deadline not found"}), 404
 
 
 @app.route("/api/refresh", methods=["POST"])

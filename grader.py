@@ -20,19 +20,6 @@ REDMINE_API_KEY = os.getenv("REDMINE_API_KEY")
 OUTPUT_DIR = Path(os.getenv("OUTPUT_DIR", "./output"))
 LIMITED_CASES = os.getenv("LIMITED_CASES", "").split(",")
 
-# Deadline configuration (UTC)
-# Format: "type_id": datetime(year, month, day, hour, minute, tzinfo=timezone.utc)
-DEADLINE_MAP: Dict[str, datetime] = {
-    "program01": datetime(2025, 5, 15, 15, 0, tzinfo=timezone.utc),  # Example: 2025-05-15 15:00 UTC
-    "program02": datetime(2025, 6, 15, 15, 0, tzinfo=timezone.utc),
-    "program03": datetime(2025, 7, 15, 15, 0, tzinfo=timezone.utc),
-    "program04": datetime(2025, 8, 15, 15, 0, tzinfo=timezone.utc),
-    "report01": datetime(2025, 5, 22, 15, 0, tzinfo=timezone.utc),
-    "report02": datetime(2025, 6, 22, 15, 0, tzinfo=timezone.utc),
-    "report03": datetime(2025, 7, 22, 15, 0, tzinfo=timezone.utc),
-    "report04": datetime(2025, 8, 22, 15, 0, tzinfo=timezone.utc),
-}
-
 SUBJECT_MAP: Dict[str, str] = {
     "01.06 プログラムの提出": "program01",
     "01.07 レポートの提出": "report01",
@@ -114,38 +101,6 @@ def get_attachment_info(
     return latest_attachment_id, latest_created_on, first_created_on
 
 
-def calculate_submission_timing(
-    type_id: str, submitted_at: datetime, first_submitted_at: datetime
-) -> str:
-    """Calculate submission timing classification.
-
-    Returns:
-        'on_time': 期限内提出
-        'resubmission': 期限内提出後の再提出
-        'late': 期限後の提出
-        'unknown': 期限が設定されていない
-    """
-    deadline = DEADLINE_MAP.get(type_id)
-    if deadline is None:
-        return "unknown"
-
-    # Make datetimes timezone-aware if they aren't
-    if submitted_at.tzinfo is None:
-        submitted_at = submitted_at.replace(tzinfo=timezone.utc)
-    if first_submitted_at.tzinfo is None:
-        first_submitted_at = first_submitted_at.replace(tzinfo=timezone.utc)
-
-    is_current_on_time = submitted_at <= deadline
-    is_first_on_time = first_submitted_at <= deadline
-
-    if is_current_on_time:
-        return "on_time"
-    elif is_first_on_time:
-        return "resubmission"
-    else:
-        return "late"
-
-
 def process_single_issue(redmine: Redmine, issue: Issue) -> Optional[Submission]:
     """Process a single issue and return a Submission object or None."""
     detailed_issue = redmine.issue.get(issue.id, include=["journals"])
@@ -185,19 +140,13 @@ def process_single_issue(redmine: Redmine, issue: Issue) -> Optional[Submission]
 
     print(f"Processing: {project_id} {report_type} {attachment.filename}")
 
-    # Calculate submission timing
-    submission_timing = calculate_submission_timing(
-        report_type, submitted_at, first_submitted_at
-    )
-
-    # Create submission record
+    # Create submission record (submission_timing is calculated at display time)
     submission = Submission(
         project_id=project_id,
         type_id=report_type,
         attachment_id=attachment_id,
         submitted_at=submitted_at,
         first_submitted_at=first_submitted_at,
-        submission_timing=submission_timing,
         status="running",
     )
     db.session.add(submission)

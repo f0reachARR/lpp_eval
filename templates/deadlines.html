@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LPP Eval - Deadline Management</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .deadline-set { background-color: #d1e7dd; }
+        .deadline-unset { background-color: #f8d7da; }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark bg-dark mb-4">
+        <div class="container">
+            <a href="/" class="navbar-brand">LPP Eval</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <nav aria-label="breadcrumb" class="mb-3">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/">Home</a></li>
+                <li class="breadcrumb-item active">Deadline Management</li>
+            </ol>
+        </nav>
+
+        <h2 class="mb-4">Deadline Management</h2>
+        <p class="text-muted mb-4">各課題タイプの提出期限を設定します。期限は日本時間（JST）で入力してください。</p>
+
+        <div class="table-responsive">
+            <table class="table table-bordered">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Type ID</th>
+                        <th>Current Deadline (JST)</th>
+                        <th>New Deadline</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for type_id in all_types %}
+                    {% set current = current_deadlines.get(type_id) %}
+                    <tr class="{{ 'deadline-set' if current else 'deadline-unset' }}">
+                        <td><strong>{{ type_id }}</strong></td>
+                        <td>
+                            {% if current %}
+                            {{ current.strftime('%Y-%m-%d %H:%M') }} (UTC)
+                            {% else %}
+                            <span class="text-muted">未設定</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <input type="datetime-local"
+                                   class="form-control deadline-input"
+                                   id="deadline-{{ type_id }}"
+                                   value="{{ current.strftime('%Y-%m-%dT%H:%M') if current else '' }}">
+                        </td>
+                        <td>
+                            <button class="btn btn-primary btn-sm" onclick="saveDeadline('{{ type_id }}')">
+                                Save
+                            </button>
+                            {% if current %}
+                            <button class="btn btn-danger btn-sm" onclick="deleteDeadline('{{ type_id }}')">
+                                Delete
+                            </button>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="mt-4">
+            <a href="/" class="btn btn-secondary">Back to Home</a>
+        </div>
+
+        <div id="toast-container" class="position-fixed bottom-0 end-0 p-3" style="z-index: 1050;">
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function showToast(message, isError = false) {
+            const container = document.getElementById('toast-container');
+            const toastId = 'toast-' + Date.now();
+            const html = `
+                <div id="${toastId}" class="toast align-items-center text-white ${isError ? 'bg-danger' : 'bg-success'}" role="alert">
+                    <div class="d-flex">
+                        <div class="toast-body">${message}</div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                </div>
+            `;
+            container.insertAdjacentHTML('beforeend', html);
+            const toastEl = document.getElementById(toastId);
+            const toast = new bootstrap.Toast(toastEl);
+            toast.show();
+            toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
+        }
+
+        function saveDeadline(typeId) {
+            const input = document.getElementById('deadline-' + typeId);
+            const value = input.value;
+
+            if (!value) {
+                showToast('Please enter a deadline', true);
+                return;
+            }
+
+            // Convert to ISO format (treat input as UTC since we display UTC)
+            const deadline = new Date(value).toISOString();
+
+            fetch('/api/deadlines/' + typeId, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ deadline: deadline })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    showToast(`Deadline for ${typeId} saved`);
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    showToast('Error: ' + data.message, true);
+                }
+            })
+            .catch(err => showToast('Error: ' + err, true));
+        }
+
+        function deleteDeadline(typeId) {
+            if (!confirm(`Delete deadline for ${typeId}?`)) return;
+
+            fetch('/api/deadlines/' + typeId, { method: 'DELETE' })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    showToast(`Deadline for ${typeId} deleted`);
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    showToast('Error: ' + data.message, true);
+                }
+            })
+            .catch(err => showToast('Error: ' + err, true));
+        }
+    </script>
+</body>
+</html>

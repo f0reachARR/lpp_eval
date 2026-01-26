@@ -91,7 +91,13 @@
         </nav>
 
         <div class="d-flex justify-content-between align-items-center mb-3">
-            <h2>{{ type_id }} - Grading Table</h2>
+            <div>
+                <h2>{{ type_id }} - Grading Table</h2>
+                <p class="text-muted mb-0">
+                    Deadline: {{ deadline.strftime('%Y-%m-%d %H:%M') if deadline else '未設定' }}
+                    <a href="/deadlines" class="ms-2 small">[Edit]</a>
+                </p>
+            </div>
             <div>
                 <span class="badge bg-success me-2">○ Passed</span>
                 <span class="badge bg-danger me-2">× Failed</span>
@@ -126,13 +132,18 @@
                             {{ project_id }}
                             {% endif %}
                         </td>
-                        <td class="timing-{{ data.submission.submission_timing if data else 'unknown' }}" style="text-align: center;">
+                        {% if data %}
+                            {% set timing = calculate_timing(data.submission, deadline) %}
+                        {% else %}
+                            {% set timing = 'unknown' %}
+                        {% endif %}
+                        <td class="timing-{{ timing }}" style="text-align: center;">
                             {% if data %}
-                                {% if data.submission.submission_timing == 'on_time' %}
+                                {% if timing == 'on_time' %}
                                 期限内
-                                {% elif data.submission.submission_timing == 'resubmission' %}
+                                {% elif timing == 'resubmission' %}
                                 再提出
-                                {% elif data.submission.submission_timing == 'late' %}
+                                {% elif timing == 'late' %}
                                 期限後
                                 {% else %}
                                 -

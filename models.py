@@ -49,3 +49,76 @@ class TestCaseResult(db.Model):
 
     def __repr__(self):
         return f"<TestCaseResult {self.name}: {self.outcome}>"
+
+
+class Deadline(db.Model):
+    __tablename__ = "deadlines"
+
+    id = db.Column(db.Integer, primary_key=True)
+    type_id = db.Column(db.String(50), nullable=False, unique=True)
+    deadline = db.Column(db.DateTime, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def __repr__(self):
+        return f"<Deadline {self.type_id}: {self.deadline}>"
+
+    @staticmethod
+    def get_deadline(type_id: str):
+        """Get deadline for a type_id."""
+        deadline = Deadline.query.filter_by(type_id=type_id).first()
+        return deadline.deadline if deadline else None
+
+    @staticmethod
+    def get_all_deadlines() -> dict:
+        """Get all deadlines as a dictionary."""
+        deadlines = Deadline.query.all()
+        return {d.type_id: d.deadline for d in deadlines}
+
+
+def calculate_submission_timing(submission, deadline: datetime = None) -> str:
+    """Calculate submission timing at display time.
+
+    Args:
+        submission: Submission object with submitted_at and first_submitted_at
+        deadline: Optional deadline datetime. If None, fetched from DB.
+
+    Returns:
+        'on_time': 期限内提出
+        'resubmission': 期限内提出後の再提出
+        'late': 期限後の提出
+        'unknown': 期限が設定されていない
+    """
+    if deadline is None:
+        deadline = Deadline.get_deadline(submission.type_id)
+
+    if deadline is None:
+        return "unknown"
+
+    submitted_at = submission.submitted_at
+    first_submitted_at = submission.first_submitted_at
+
+    if submitted_at is None:
+        return "unknown"
+
+    # Use submitted_at as first if first_submitted_at is not set
+    if first_submitted_at is None:
+        first_submitted_at = submitted_at
+
+    # Make timezone-naive for comparison (assume all times are UTC)
+    if hasattr(deadline, 'tzinfo') and deadline.tzinfo is not None:
+        deadline = deadline.replace(tzinfo=None)
+    if hasattr(submitted_at, 'tzinfo') and submitted_at.tzinfo is not None:
+        submitted_at = submitted_at.replace(tzinfo=None)
+    if hasattr(first_submitted_at, 'tzinfo') and first_submitted_at.tzinfo is not None:
+        first_submitted_at = first_submitted_at.replace(tzinfo=None)
+
+    is_current_on_time = submitted_at <= deadline
+    is_first_on_time = first_submitted_at <= deadline
+
+    if is_current_on_time:
+        return "on_time"
+    elif is_first_on_time:
+        return "resubmission"
+    else:
+        return "late"
