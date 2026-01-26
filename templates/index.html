@@ -1,174 +1,190 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ja">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>LPP Eval - Submission Results</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
     <style>
-        .status-completed { color: #198754; }
-        .status-running { color: #0d6efd; }
-        .status-pending { color: #6c757d; }
-        .status-error { color: #dc3545; }
-        .pass-rate-high { background-color: #d1e7dd; }
-        .pass-rate-mid { background-color: #fff3cd; }
-        .pass-rate-low { background-color: #f8d7da; }
+      .status-completed {
+        color: #198754;
+      }
+      .status-running {
+        color: #0d6efd;
+      }
+      .status-pending {
+        color: #6c757d;
+      }
+      .status-error {
+        color: #dc3545;
+      }
+      .pass-rate-high {
+        background-color: #d1e7dd;
+      }
+      .pass-rate-mid {
+        background-color: #fff3cd;
+      }
+      .pass-rate-low {
+        background-color: #f8d7da;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <nav class="navbar navbar-dark bg-dark mb-4">
-        <div class="container">
-            <span class="navbar-brand">LPP Eval</span>
-            <div>
-                <a href="/grading" class="btn btn-outline-info btn-sm me-2">Grading Table</a>
-                <a href="/deadlines" class="btn btn-outline-warning btn-sm me-2">Deadlines</a>
-                <a href="/students" class="btn btn-outline-success btn-sm me-2">Students</a>
-                <button class="btn btn-outline-light btn-sm" onclick="refreshSubmissions()">
-                    Refresh
-                </button>
-            </div>
+      <div class="container">
+        <span class="navbar-brand">LPP Eval</span>
+        <div>
+          <a href="/grading" class="btn btn-outline-info btn-sm me-2"
+            >Grading Table</a
+          >
+          <a href="/deadlines" class="btn btn-outline-warning btn-sm me-2"
+            >Deadlines</a
+          >
+          <a href="/students" class="btn btn-outline-success btn-sm me-2"
+            >Students</a
+          >
+          <button
+            class="btn btn-outline-light btn-sm"
+            onclick="refreshSubmissions()"
+          >
+            Refresh
+          </button>
         </div>
+      </div>
     </nav>
 
     <div class="container">
-        <h2 class="mb-4">Submission Results</h2>
+      <h2 class="mb-4">Submission Results</h2>
 
-        <div class="mb-3">
-            <input type="text" id="filterInput" class="form-control" placeholder="Filter by project ID or type...">
-        </div>
+      <div class="mb-3">
+        <input
+          type="text"
+          id="filterInput"
+          class="form-control"
+          placeholder="Filter by project ID or type..."
+        />
+      </div>
 
-        <div class="table-responsive">
-            <table class="table table-striped table-hover" id="submissionTable">
-                <thead class="table-dark">
-                    <tr>
-                        <th onclick="sortTable(0)" style="cursor: pointer;">Project ID</th>
-                        <th onclick="sortTable(1)" style="cursor: pointer;">Type</th>
-                        <th onclick="sortTable(2)" style="cursor: pointer;">Test Suite</th>
-                        <th onclick="sortTable(3)" style="cursor: pointer;">Result</th>
-                        <th onclick="sortTable(4)" style="cursor: pointer;">Status</th>
-                        <th onclick="sortTable(5)" style="cursor: pointer;">Submitted</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for submission in submissions %}
-                    <tr class="{% if submission.total > 0 %}{% if submission.passed == submission.total %}pass-rate-high{% elif submission.passed >= submission.total * 0.5 %}pass-rate-mid{% else %}pass-rate-low{% endif %}{% endif %}">
-                        <td>{{ submission.project_id }}</td>
-                        <td>{{ submission.type_id }}</td>
-                        <td>{{ submission.testcase_id or '-' }}</td>
-                        <td>
-                            {% if submission.total > 0 %}
-                                {{ submission.passed }} / {{ submission.total }}
-                                ({{ (submission.passed / submission.total * 100) | round(1) }}%)
-                            {% else %}
-                                -
-                            {% endif %}
-                        </td>
-                        <td>
-                            <span class="status-{{ submission.status }}">
-                                {{ submission.status }}
-                            </span>
-                        </td>
-                        <td>{{ submission.submitted_at | jst }}</td>
-                        <td>
-                            <a href="/submission/{{ submission.id }}" class="btn btn-sm btn-outline-primary">
-                                Detail
-                            </a>
-                        </td>
-                    </tr>
-                    {% else %}
-                    <tr>
-                        <td colspan="7" class="text-center text-muted">No submissions found</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+      <div class="table-responsive">
+        <table class="table table-striped table-hover" id="submissionTable">
+          <thead class="table-dark">
+            <tr>
+              <th onclick="sortTable(0)" style="cursor: pointer">Project ID</th>
+              <th onclick="sortTable(1)" style="cursor: pointer">Type</th>
+              <th onclick="sortTable(2)" style="cursor: pointer">Test Suite</th>
+              <th onclick="sortTable(3)" style="cursor: pointer">Result</th>
+              <th onclick="sortTable(4)" style="cursor: pointer">Status</th>
+              <th onclick="sortTable(5)" style="cursor: pointer">Submitted</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for submission in submissions %}
+            <tr
+              class="{% if submission.total > 0 %}{% if submission.passed == submission.total %}pass-rate-high{% elif submission.passed >= submission.total * 0.5 %}pass-rate-mid{% else %}pass-rate-low{% endif %}{% endif %}"
+            >
+              <td>{{ submission.project_id }}</td>
+              <td>{{ submission.type_id }}</td>
+              <td>{{ submission.testcase_id or '-' }}</td>
+              <td>
+                {% if submission.total > 0 %} {{ submission.passed }} / {{
+                submission.total }} ({{ (submission.passed / submission.total *
+                100) | round(1) }}%) {% else %} - {% endif %}
+              </td>
+              <td>
+                <span class="status-{{ submission.status }}">
+                  {{ submission.status }}
+                </span>
+              </td>
+              <td>{{ submission.submitted_at | jst }}</td>
+              <td>
+                <a
+                  href="/submission/{{ submission.id }}"
+                  class="btn btn-sm btn-outline-primary"
+                >
+                  Detail
+                </a>
+              </td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="7" class="text-center text-muted">
+                No submissions found
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Filter functionality
-        document.getElementById('filterInput').addEventListener('keyup', function() {
-            const filter = this.value.toLowerCase();
-            const rows = document.querySelectorAll('#submissionTable tbody tr');
-            rows.forEach(row => {
-                const text = row.textContent.toLowerCase();
-                row.style.display = text.includes(filter) ? '' : 'none';
-            });
+      // Filter functionality
+      document
+        .getElementById("filterInput")
+        .addEventListener("keyup", function () {
+          const filter = this.value.toLowerCase();
+          const rows = document.querySelectorAll("#submissionTable tbody tr");
+          rows.forEach((row) => {
+            const text = row.textContent.toLowerCase();
+            row.style.display = text.includes(filter) ? "" : "none";
+          });
         });
 
-        // Sort functionality
-        let sortDirection = {};
-        function sortTable(columnIndex) {
-            const table = document.getElementById('submissionTable');
-            const tbody = table.querySelector('tbody');
-            const rows = Array.from(tbody.querySelectorAll('tr'));
+      // Sort functionality
+      let sortDirection = {};
+      function sortTable(columnIndex) {
+        const table = document.getElementById("submissionTable");
+        const tbody = table.querySelector("tbody");
+        const rows = Array.from(tbody.querySelectorAll("tr"));
 
-            sortDirection[columnIndex] = !sortDirection[columnIndex];
-            const direction = sortDirection[columnIndex] ? 1 : -1;
+        sortDirection[columnIndex] = !sortDirection[columnIndex];
+        const direction = sortDirection[columnIndex] ? 1 : -1;
 
-            rows.sort((a, b) => {
-                const aText = a.cells[columnIndex]?.textContent.trim() || '';
-                const bText = b.cells[columnIndex]?.textContent.trim() || '';
-                return aText.localeCompare(bText, 'ja', { numeric: true }) * direction;
-            });
+        rows.sort((a, b) => {
+          const aText = a.cells[columnIndex]?.textContent.trim() || "";
+          const bText = b.cells[columnIndex]?.textContent.trim() || "";
+          return (
+            aText.localeCompare(bText, "ja", { numeric: true }) * direction
+          );
+        });
 
-            rows.forEach(row => tbody.appendChild(row));
-        }
+        rows.forEach((row) => tbody.appendChild(row));
+      }
 
-        // Refresh functionality
-        let refreshJobId = null;
-        let refreshCheckInterval = null;
+      // Refresh functionality
+      let refreshCheckInterval = null;
 
-        function refreshSubmissions() {
-            const btn = document.querySelector('button[onclick="refreshSubmissions()"]');
-            btn.disabled = true;
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Checking...';
+      function refreshSubmissions() {
+        const btn = document.querySelector(
+          'button[onclick="refreshSubmissions()"]',
+        );
+        btn.disabled = true;
+        btn.innerHTML =
+          '<span class="spinner-border spinner-border-sm me-1"></span>Checking...';
 
-            fetch('/api/refresh', { method: 'POST' })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.status === 'queued') {
-                        refreshJobId = data.job_id;
-                        refreshCheckInterval = setInterval(checkRefreshStatus, 1000);
-                    } else {
-                        resetRefreshButton();
-                        alert('Error: ' + (data.message || 'Unknown error'));
-                    }
-                })
-                .catch(err => {
-                    resetRefreshButton();
-                    alert('Request failed: ' + err);
-                });
-        }
+        fetch("/api/refresh", { method: "POST" })
+          .then((response) => response.json())
+          .then((data) => {
+            resetRefreshButton();
+          })
+          .catch((err) => {
+            resetRefreshButton();
+            alert("Request failed: " + err);
+          });
+      }
 
-        function checkRefreshStatus() {
-            if (!refreshJobId) return;
-
-            fetch(`/api/refresh/${refreshJobId}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.status === 'completed') {
-                        clearInterval(refreshCheckInterval);
-                        refreshJobId = null;
-                        resetRefreshButton();
-                        location.reload();
-                    }
-                })
-                .catch(err => {
-                    clearInterval(refreshCheckInterval);
-                    refreshJobId = null;
-                    resetRefreshButton();
-                    console.error('Status check failed:', err);
-                });
-        }
-
-        function resetRefreshButton() {
-            const btn = document.querySelector('button[onclick="refreshSubmissions()"]');
-            btn.disabled = false;
-            btn.innerHTML = 'Refresh';
-        }
+      function resetRefreshButton() {
+        const btn = document.querySelector(
+          'button[onclick="refreshSubmissions()"]',
+        );
+        btn.disabled = false;
+        btn.innerHTML = "Refresh";
+      }
     </script>
-</body>
+  </body>
 </html>

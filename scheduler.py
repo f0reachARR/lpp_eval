@@ -43,20 +43,28 @@ def _run_grader_job():
         except Exception as e:
             print(f"Scheduler error: {e}")
 
+        # Add next job (in case interval changed)
+        scheduler.add_job(
+            func=_run_grader_job,
+            trigger=IntervalTrigger(minutes=interval_minutes),
+            id="submission_checker",
+            name="Check and process new submissions",
+            replace_existing=True,
+        )
+
 
 def trigger_refresh():
     """Trigger an immediate refresh job. Returns job ID."""
-    job_id = f"manual_refresh_{datetime.now().timestamp()}"
 
     scheduler.add_job(
         func=_run_grader_job,
         trigger=DateTrigger(run_date=datetime.now()),
-        id=job_id,
-        name="Manual refresh",
-        replace_existing=False,
+        id="submission_checker",
+        name="Check and process new submissions",
+        replace_existing=True,
     )
 
-    return job_id
+    return
 
 
 def get_job_status(job_id: str) -> dict:

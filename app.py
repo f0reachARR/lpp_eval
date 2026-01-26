@@ -276,8 +276,8 @@ def api_sync_students():
     from scheduler import trigger_sync_students
 
     try:
-        job_id = trigger_sync_students()
-        return jsonify({"status": "queued", "job_id": job_id})
+        trigger_sync_students()
+        return jsonify({"status": "queued"})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
@@ -286,17 +286,10 @@ def api_sync_students():
 def api_refresh():
     """Queue a submission check job (non-blocking)."""
     try:
-        job_id = trigger_refresh()
-        return jsonify({"status": "queued", "job_id": job_id})
+        trigger_refresh()
+        return jsonify({"status": "queued"})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
-
-
-@app.route("/api/refresh/<job_id>", methods=["GET"])
-def api_refresh_status(job_id):
-    """Check the status of a refresh job."""
-    status = get_job_status(job_id)
-    return jsonify(status)
 
 
 if __name__ == "__main__":
