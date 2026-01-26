@@ -305,7 +305,7 @@ def api_get_submission_attachment(submission_id):
     # Send the file as an attachment
     from flask import send_file
 
-    return send_file(str(file_path), as_attachment=True, download_name=file_path.name)
+    return send_file(str(file_path), download_name=file_path.name)
 
 
 if __name__ == "__main__":
