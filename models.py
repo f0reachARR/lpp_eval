@@ -24,7 +24,7 @@ class Submission(db.Model):
     # on_time: 期限内提出
     # resubmission: 期限内提出後の再提出
     # late: 期限後の提出
-    submission_timing = db.Column(db.String(20), default="unknown")
+    # submission_timing = db.Column(db.String(20), default="unknown")
     # First submission timestamp for this project/type (to detect resubmission)
     first_submitted_at = db.Column(db.DateTime, nullable=True)
 
@@ -58,7 +58,9 @@ class Deadline(db.Model):
     type_id = db.Column(db.String(50), nullable=False, unique=True)
     deadline = db.Column(db.DateTime, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = db.Column(
+        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
 
     def __repr__(self):
         return f"<Deadline {self.type_id}: {self.deadline}>"
@@ -106,11 +108,11 @@ def calculate_submission_timing(submission, deadline: datetime = None) -> str:
         first_submitted_at = submitted_at
 
     # Make timezone-naive for comparison (assume all times are UTC)
-    if hasattr(deadline, 'tzinfo') and deadline.tzinfo is not None:
+    if hasattr(deadline, "tzinfo") and deadline.tzinfo is not None:
         deadline = deadline.replace(tzinfo=None)
-    if hasattr(submitted_at, 'tzinfo') and submitted_at.tzinfo is not None:
+    if hasattr(submitted_at, "tzinfo") and submitted_at.tzinfo is not None:
         submitted_at = submitted_at.replace(tzinfo=None)
-    if hasattr(first_submitted_at, 'tzinfo') and first_submitted_at.tzinfo is not None:
+    if hasattr(first_submitted_at, "tzinfo") and first_submitted_at.tzinfo is not None:
         first_submitted_at = first_submitted_at.replace(tzinfo=None)
 
     is_current_on_time = submitted_at <= deadline
