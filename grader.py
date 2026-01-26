@@ -129,7 +129,7 @@ def process_single_issue(redmine: Redmine, issue: Issue) -> Optional[Submission]
 
     # Check if already processed
     existing = Submission.query.filter_by(attachment_id=attachment_id).first()
-    if existing:
+    if existing and existing.status == "completed":
         print(f"Already processed: {project_id}/{report_type} ({attachment_id})")
         return None
 
@@ -142,15 +142,21 @@ def process_single_issue(redmine: Redmine, issue: Issue) -> Optional[Submission]
     print(f"Processing: {project_id} {report_type} {attachment.filename}")
 
     # Create submission record (submission_timing is calculated at display time)
-    submission = Submission(
-        project_id=project_id,
-        type_id=report_type,
-        attachment_id=attachment_id,
-        submitted_at=submitted_at,
-        first_submitted_at=first_submitted_at,
-        status="running",
+    submission = (
+        Submission(
+            project_id=project_id,
+            type_id=report_type,
+            attachment_id=attachment_id,
+            submitted_at=submitted_at,
+            first_submitted_at=first_submitted_at,
+            status="running",
+        )
+        if existing is None
+        else existing
     )
-    db.session.add(submission)
+    submission.status = "running"
+    if existing is None:
+        db.session.add(submission)
     db.session.commit()
 
     # Download attachment
