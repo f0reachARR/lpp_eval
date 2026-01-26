@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LPP Eval - {{ type_id }} Grading Table</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .grading-table {
+            font-size: 0.85rem;
+        }
+        .grading-table th {
+            position: sticky;
+            top: 0;
+            background: #212529;
+            color: white;
+            z-index: 10;
+        }
+        .grading-table th.project-header {
+            position: sticky;
+            left: 0;
+            z-index: 20;
+        }
+        .grading-table td.project-cell {
+            position: sticky;
+            left: 0;
+            background: #f8f9fa;
+            font-weight: bold;
+            z-index: 5;
+        }
+        .cell-passed {
+            background-color: #d1e7dd;
+            text-align: center;
+        }
+        .cell-failed {
+            background-color: #f8d7da;
+            text-align: center;
+        }
+        .cell-not-submitted {
+            background-color: #e9ecef;
+            text-align: center;
+            color: #6c757d;
+        }
+        .testcase-header {
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            max-width: 40px;
+            height: 120px;
+            padding: 5px 2px;
+            font-size: 0.75rem;
+        }
+        .summary-cell {
+            font-weight: bold;
+        }
+        .table-container {
+            max-height: 80vh;
+            overflow: auto;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark bg-dark mb-4">
+        <div class="container-fluid">
+            <a href="/" class="navbar-brand">LPP Eval</a>
+        </div>
+    </nav>
+
+    <div class="container-fluid">
+        <nav aria-label="breadcrumb" class="mb-3">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/">Home</a></li>
+                <li class="breadcrumb-item"><a href="/grading">Grading Table</a></li>
+                <li class="breadcrumb-item active">{{ type_id }}</li>
+            </ol>
+        </nav>
+
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2>{{ type_id }} - Grading Table</h2>
+            <div>
+                <span class="badge bg-success me-2">Passed</span>
+                <span class="badge bg-danger me-2">Failed</span>
+                <span class="badge bg-secondary">Not Submitted</span>
+            </div>
+        </div>
+
+        {% if project_ids %}
+        <div class="table-container">
+            <table class="table table-bordered grading-table">
+                <thead>
+                    <tr>
+                        <th class="project-header">Project ID</th>
+                        <th>Total</th>
+                        {% for tc in testcase_list %}
+                        <th class="testcase-header" title="{{ tc }}">{{ tc }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for project_id in project_ids %}
+                    {% set data = submission_results.get(project_id) %}
+                    <tr>
+                        <td class="project-cell">
+                            {% if data %}
+                            <a href="/submission/{{ data.submission.id }}">{{ project_id }}</a>
+                            {% else %}
+                            {{ project_id }}
+                            {% endif %}
+                        </td>
+                        <td class="summary-cell">
+                            {% if data %}
+                            {{ data.submission.passed }}/{{ data.submission.total }}
+                            {% else %}
+                            -
+                            {% endif %}
+                        </td>
+                        {% for tc in testcase_list %}
+                        {% if data %}
+                            {% set outcome = data.results.get(tc) %}
+                            {% if outcome == 'passed' %}
+                            <td class="cell-passed" title="{{ tc }}: passed">○</td>
+                            {% elif outcome == 'failed' %}
+                            <td class="cell-failed" title="{{ tc }}: failed">×</td>
+                            {% else %}
+                            <td class="cell-not-submitted" title="{{ tc }}: not run">-</td>
+                            {% endif %}
+                        {% else %}
+                        <td class="cell-not-submitted" title="Not submitted">-</td>
+                        {% endif %}
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="mt-3">
+            <p class="text-muted">
+                Total: {{ project_ids | length }} projects, {{ testcase_list | length }} test cases
+            </p>
+        </div>
+        {% else %}
+        <div class="alert alert-info">
+            No submissions found for {{ type_id }}.
+        </div>
+        {% endif %}
+
+        <a href="/grading" class="btn btn-secondary mt-3 mb-4">Back to Type Selection</a>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

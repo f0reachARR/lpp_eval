@@ -60,6 +60,58 @@ def api_submissions():
     )
 
 
+@app.route("/grading")
+def grading():
+    """Display grading table selector."""
+    # Get available types from grader
+    from grader import TEST_MAP
+    available_types = list(TEST_MAP.keys())
+    return render_template("grading.html", available_types=available_types)
+
+
+@app.route("/grading/<type_id>")
+def grading_table(type_id):
+    """Display grading table for a specific type."""
+    from grader import TEST_MAP
+
+    if type_id not in TEST_MAP:
+        return "Invalid type", 404
+
+    # Get all submissions for this type
+    submissions = (
+        Submission.query.filter_by(type_id=type_id, status="completed")
+        .order_by(Submission.project_id)
+        .all()
+    )
+
+    # Collect all unique test case names across all submissions
+    all_testcases = set()
+    submission_results = {}
+
+    for sub in submissions:
+        test_results = TestCaseResult.query.filter_by(submission_id=sub.id).all()
+        results_dict = {tr.name: tr.outcome for tr in test_results}
+        submission_results[sub.project_id] = {
+            "submission": sub,
+            "results": results_dict,
+        }
+        all_testcases.update(results_dict.keys())
+
+    # Sort test case names
+    testcase_list = sorted(all_testcases)
+
+    # Get all project IDs (including those without submissions)
+    project_ids = sorted(submission_results.keys())
+
+    return render_template(
+        "grading_table.html",
+        type_id=type_id,
+        testcase_list=testcase_list,
+        project_ids=project_ids,
+        submission_results=submission_results,
+    )
+
+
 @app.route("/api/refresh", methods=["POST"])
 def api_refresh():
     """Queue a submission check job (non-blocking)."""

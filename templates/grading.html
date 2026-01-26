@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LPP Eval - Grading Table</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-dark bg-dark mb-4">
+        <div class="container">
+            <a href="/" class="navbar-brand">LPP Eval</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <nav aria-label="breadcrumb" class="mb-3">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/">Home</a></li>
+                <li class="breadcrumb-item active">Grading Table</li>
+            </ol>
+        </nav>
+
+        <h2 class="mb-4">Select Type</h2>
+
+        <div class="row">
+            {% for type_id in available_types %}
+            <div class="col-md-3 mb-3">
+                <a href="/grading/{{ type_id }}" class="btn btn-outline-primary btn-lg w-100">
+                    {{ type_id }}
+                </a>
+            </div>
+            {% else %}
+            <div class="col-12">
+                <p class="text-muted">No program types available.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
