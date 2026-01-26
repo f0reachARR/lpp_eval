@@ -45,7 +45,7 @@
                         <td><strong>{{ type_id }}</strong></td>
                         <td>
                             {% if current %}
-                            {{ current.strftime('%Y-%m-%d %H:%M') }} (UTC)
+                            {{ current | jst }} (JST)
                             {% else %}
                             <span class="text-muted">未設定</span>
                             {% endif %}
@@ -54,7 +54,7 @@
                             <input type="datetime-local"
                                    class="form-control deadline-input"
                                    id="deadline-{{ type_id }}"
-                                   value="{{ current.strftime('%Y-%m-%dT%H:%M') if current else '' }}">
+                                   value="{{ current | jst('%Y-%m-%dT%H:%M') if current else '' }}">
                         </td>
                         <td>
                             <button class="btn btn-primary btn-sm" onclick="saveDeadline('{{ type_id }}')">
@@ -109,7 +109,7 @@
                 return;
             }
 
-            // Convert to ISO format (treat input as UTC since we display UTC)
+            // Convert to ISO format (input is JST, browser converts to UTC)
             const deadline = new Date(value).toISOString();
 
             fetch('/api/deadlines/' + typeId, {

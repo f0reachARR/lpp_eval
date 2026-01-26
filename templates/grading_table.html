@@ -94,7 +94,7 @@
             <div>
                 <h2>{{ type_id }} - Grading Table</h2>
                 <p class="text-muted mb-0">
-                    Deadline: {{ deadline.strftime('%Y-%m-%d %H:%M') if deadline else '未設定' }}
+                    Deadline: {{ deadline | jst if deadline else '未設定' }}
                     <a href="/deadlines" class="ms-2 small">[Edit]</a>
                 </p>
             </div>

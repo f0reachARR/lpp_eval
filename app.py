@@ -20,7 +20,9 @@ from scheduler import (
     trigger_refresh,
     get_job_status,
 )
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
+
+JST = timezone(timedelta(hours=9))
 
 app = Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv(
@@ -32,6 +34,19 @@ db.init_app(app)
 
 with app.app_context():
     db.create_all()
+
+
+# Custom Jinja2 filter for JST datetime formatting
+@app.template_filter("jst")
+def jst_filter(dt, fmt="%Y-%m-%d %H:%M"):
+    """Convert UTC datetime to JST and format it."""
+    if dt is None:
+        return "-"
+    # Assume dt is naive UTC, convert to JST
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    jst_dt = dt.astimezone(JST)
+    return jst_dt.strftime(fmt)
 
 
 # Make calculate_submission_timing available in templates

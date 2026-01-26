@@ -81,7 +81,7 @@
                                         {% endif %}
                                     </span>
                                     {% if deadline %}
-                                    <small class="text-muted">(期限: {{ deadline.strftime('%Y-%m-%d %H:%M') }})</small>
+                                    <small class="text-muted">(期限: {{ deadline | jst }})</small>
                                     {% endif %}
                                 </td>
                             </tr>
@@ -102,15 +102,15 @@
                             </tr>
                             <tr>
                                 <th>First Submitted:</th>
-                                <td>{{ submission.first_submitted_at.strftime('%Y-%m-%d %H:%M:%S') if submission.first_submitted_at else '-' }}</td>
+                                <td>{{ submission.first_submitted_at | jst('%Y-%m-%d %H:%M:%S') }}</td>
                             </tr>
                             <tr>
                                 <th>Current Submitted:</th>
-                                <td>{{ submission.submitted_at.strftime('%Y-%m-%d %H:%M:%S') if submission.submitted_at else '-' }}</td>
+                                <td>{{ submission.submitted_at | jst('%Y-%m-%d %H:%M:%S') }}</td>
                             </tr>
                             <tr>
                                 <th>Evaluated:</th>
-                                <td>{{ submission.evaluated_at.strftime('%Y-%m-%d %H:%M:%S') if submission.evaluated_at else '-' }}</td>
+                                <td>{{ submission.evaluated_at | jst('%Y-%m-%d %H:%M:%S') }}</td>
                             </tr>
                             <tr>
                                 <th>Attachment ID:</th>
