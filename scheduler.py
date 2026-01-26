@@ -44,6 +44,8 @@ def _run_grader_job():
             print(f"Scheduler error: {e}")
 
         # Add next job (in case interval changed)
+        interval_minutes = int(os.getenv("SCHEDULER_INTERVAL_MINUTES", "5"))
+
         scheduler.add_job(
             func=_run_grader_job,
             trigger=IntervalTrigger(minutes=interval_minutes),
