@@ -74,6 +74,37 @@ def get_job_status(job_id: str) -> dict:
     }
 
 
+def trigger_sync_students():
+    """Trigger an immediate student sync job. Returns job ID."""
+    job_id = f"manual_sync_students_{datetime.now().timestamp()}"
+
+    scheduler.add_job(
+        func=_run_sync_students_job,
+        trigger=DateTrigger(run_date=datetime.now()),
+        id=job_id,
+        name="Manual sync students",
+        replace_existing=False,
+    )
+
+    return job_id
+
+
+def _run_sync_students_job():
+    """Run the student sync job with Flask app context."""
+    if _app is None:
+        print("Scheduler error: Flask app not initialized")
+        return
+
+    from grader import sync_students
+
+    print("Running student sync...")
+    try:
+        synced = sync_students()
+        print(f"Synced {len(synced)} students")
+    except Exception as e:
+        print(f"Scheduler error: {e}")
+
+
 def shutdown_scheduler():
     """Shutdown the scheduler."""
     if scheduler.running:

@@ -51,6 +51,39 @@ class TestCaseResult(db.Model):
         return f"<TestCaseResult {self.name}: {self.outcome}>"
 
 
+class Student(db.Model):
+    __tablename__ = "students"
+
+    id = db.Column(db.Integer, primary_key=True)
+    project_id = db.Column(db.String(50), nullable=False, unique=True)
+    name = db.Column(db.String(100), nullable=False)
+    redmine_user_id = db.Column(db.Integer, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(
+        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
+
+    def __repr__(self):
+        return f"<Student {self.project_id}: {self.name}>"
+
+    @staticmethod
+    def get_by_project_id(project_id: str):
+        """Get student by project_id."""
+        return Student.query.filter_by(project_id=project_id).first()
+
+    @staticmethod
+    def get_all_students() -> dict:
+        """Get all students as a dictionary {project_id: name}."""
+        students = Student.query.all()
+        return {s.project_id: s.name for s in students}
+
+    @staticmethod
+    def get_all_project_ids() -> list:
+        """Get all project IDs."""
+        students = Student.query.order_by(Student.project_id).all()
+        return [s.project_id for s in students]
+
+
 class Deadline(db.Model):
     __tablename__ = "deadlines"
 

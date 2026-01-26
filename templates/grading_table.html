@@ -114,6 +114,7 @@
                 <thead>
                     <tr>
                         <th class="project-header">Project ID</th>
+                        <th>Name</th>
                         <th>Timing</th>
                         <th>Total</th>
                         {% for tc in testcase_list %}
@@ -132,6 +133,7 @@
                             {{ project_id }}
                             {% endif %}
                         </td>
+                        <td>{{ student_names.get(project_id, '-') }}</td>
                         {% if data %}
                             {% set timing = calculate_timing(data.submission, deadline) %}
                         {% else %}

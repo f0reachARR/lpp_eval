@@ -11,7 +11,7 @@ from redminelib import Redmine
 from redminelib.resources import Issue
 
 from eval import run_extract, run_tests
-from models import Submission, TestCaseResult, db
+from models import Submission, TestCaseResult, Student, db
 
 load_dotenv()
 
@@ -57,6 +57,7 @@ REPORT_MAP: Dict[str, str] = {
 }
 
 PROJECT_REGEX = re.compile(r"言語処理プログラミング \((\d+)\)")
+STUDENT_ROLE_NAME = os.getenv("STUDENT_ROLE_NAME", "学生")
 
 
 def get_redmine_client() -> Redmine:
@@ -233,6 +234,71 @@ def process_single_issue(redmine: Redmine, issue: Issue) -> Optional[Submission]
     )
 
     return submission
+
+
+def sync_students() -> List[Student]:
+    """Sync students from Redmine projects.
+
+    Fetches all projects matching the pattern and extracts student users.
+    """
+    redmine = get_redmine_client()
+    synced: List[Student] = []
+
+    # Get all projects
+    try:
+        projects = redmine.project.all()
+    except Exception as e:
+        print(f"Failed to fetch projects: {e}")
+        return synced
+
+    for project in projects:
+        match = PROJECT_REGEX.match(project.name)
+        if not match:
+            continue
+
+        project_id = match.group(1)
+
+        # Check if student already exists
+        existing = Student.get_by_project_id(project_id)
+        if existing:
+            continue
+
+        # Get project memberships
+        try:
+            memberships = redmine.project_membership.filter(project_id=project.id)
+        except Exception as e:
+            print(f"Failed to fetch memberships for {project.name}: {e}")
+            continue
+
+        # Find student role member
+        student_name = None
+        student_user_id = None
+
+        for membership in memberships:
+            # Check if this member has the student role
+            roles = getattr(membership, "roles", [])
+            for role in roles:
+                if role.name == STUDENT_ROLE_NAME:
+                    user = getattr(membership, "user", None)
+                    if user:
+                        student_name = user.name
+                        student_user_id = user.id
+                        break
+            if student_name:
+                break
+
+        if student_name:
+            student = Student(
+                project_id=project_id,
+                name=student_name,
+                redmine_user_id=student_user_id,
+            )
+            db.session.add(student)
+            db.session.commit()
+            synced.append(student)
+            print(f"Synced student: {project_id} - {student_name}")
+
+    return synced
 
 
 def process_submissions() -> List[Submission]:

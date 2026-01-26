@@ -5,8 +5,20 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from models import db, Submission, TestCaseResult, Deadline, calculate_submission_timing
-from scheduler import init_scheduler, shutdown_scheduler, trigger_refresh, get_job_status
+from models import (
+    db,
+    Submission,
+    TestCaseResult,
+    Deadline,
+    Student,
+    calculate_submission_timing,
+)
+from scheduler import (
+    init_scheduler,
+    shutdown_scheduler,
+    trigger_refresh,
+    get_job_status,
+)
 from datetime import datetime
 
 app = Flask(__name__)
@@ -41,7 +53,10 @@ def detail(submission_id):
     test_results = TestCaseResult.query.filter_by(submission_id=submission_id).all()
     deadline = Deadline.get_deadline(submission.type_id)
     return render_template(
-        "detail.html", submission=submission, test_results=test_results, deadline=deadline
+        "detail.html",
+        submission=submission,
+        test_results=test_results,
+        deadline=deadline,
     )
 
 
@@ -73,6 +88,7 @@ def grading():
     """Display grading table selector."""
     # Get available types from grader
     from grader import TEST_MAP
+
     available_types = list(TEST_MAP.keys())
     return render_template("grading.html", available_types=available_types)
 
@@ -108,8 +124,14 @@ def grading_table(type_id):
     # Sort test case names
     testcase_list = sorted(all_testcases)
 
-    # Get all project IDs (including those without submissions)
-    project_ids = sorted(submission_results.keys())
+    # Get all students from DB (including those without submissions)
+    all_students = Student.get_all_students()  # {project_id: name}
+    all_project_ids = Student.get_all_project_ids()
+
+    # Merge with submitted project IDs (in case there are submissions without student records)
+    project_ids_with_submissions = set(submission_results.keys())
+    all_project_ids_set = set(all_project_ids) | project_ids_with_submissions
+    project_ids = sorted(all_project_ids_set)
 
     # Get deadline for this type
     deadline = Deadline.get_deadline(type_id)
@@ -120,6 +142,7 @@ def grading_table(type_id):
         testcase_list=testcase_list,
         project_ids=project_ids,
         submission_results=submission_results,
+        student_names=all_students,
         deadline=deadline,
     )
 
@@ -184,7 +207,13 @@ def api_set_deadline(type_id):
             db.session.add(new_deadline)
 
         db.session.commit()
-        return jsonify({"status": "success", "type_id": type_id, "deadline": deadline_dt.isoformat()})
+        return jsonify(
+            {
+                "status": "success",
+                "type_id": type_id,
+                "deadline": deadline_dt.isoformat(),
+            }
+        )
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
@@ -196,8 +225,45 @@ def api_delete_deadline(type_id):
     if existing:
         db.session.delete(existing)
         db.session.commit()
-        return jsonify({"status": "success", "message": f"Deadline for {type_id} deleted"})
+        return jsonify(
+            {"status": "success", "message": f"Deadline for {type_id} deleted"}
+        )
     return jsonify({"status": "error", "message": "Deadline not found"}), 404
+
+
+@app.route("/students")
+def students():
+    """Display student list page."""
+    all_students = Student.query.order_by(Student.project_id).all()
+    return render_template("students.html", students=all_students)
+
+
+@app.route("/api/students", methods=["GET"])
+def api_get_students():
+    """Get all students."""
+    students = Student.query.order_by(Student.project_id).all()
+    return jsonify(
+        [
+            {
+                "project_id": s.project_id,
+                "name": s.name,
+                "redmine_user_id": s.redmine_user_id,
+            }
+            for s in students
+        ]
+    )
+
+
+@app.route("/api/students/sync", methods=["POST"])
+def api_sync_students():
+    """Sync students from Redmine."""
+    from scheduler import trigger_sync_students
+
+    try:
+        job_id = trigger_sync_students()
+        return jsonify({"status": "queued", "job_id": job_id})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 
 @app.route("/api/refresh", methods=["POST"])
