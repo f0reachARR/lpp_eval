@@ -1,3 +1,4 @@
+from testcases import shorten_testcase
 import os
 import atexit
 from flask import Flask, render_template, jsonify, request
@@ -114,7 +115,7 @@ def grading_table(type_id):
 
     for sub in submissions:
         test_results = TestCaseResult.query.filter_by(submission_id=sub.id).all()
-        results_dict = {tr.name: tr.outcome for tr in test_results}
+        results_dict = {shorten_testcase(tr.name): tr.outcome for tr in test_results}
         submission_results[sub.project_id] = {
             "submission": sub,
             "results": results_dict,
