@@ -145,7 +145,7 @@ def grading_table(type_id):
         results_dict = {shorten_testcase(tr.name): tr.outcome for tr in test_results}
         if (
             sub.project_id in submission_results
-            and sub.passed >= submission_results[sub.project_id]["submission"].passed
+            and sub.passed < submission_results[sub.project_id]["submission"].passed
         ):
             # If multiple submissions exist for the same project_id,
             # keep the one with the highest passed count
