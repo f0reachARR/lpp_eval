@@ -342,4 +342,4 @@ if __name__ == "__main__":
 
     debug = os.getenv("FLASK_DEBUG", "false").lower() == "true"
     port = int(os.getenv("FLASK_PORT", "5000"))
-    app.run(debug=debug, port=port, use_reloader=False)
+    app.run(debug=debug, port=port, use_reloader=False, host="0.0.0.0")
