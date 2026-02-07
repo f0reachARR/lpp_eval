@@ -1,4 +1,5 @@
 from testcases import shorten_testcase
+from score import program01score, program02score, program03score, program04score
 import os
 import atexit
 from flask import Flask, render_template, jsonify, request
@@ -18,7 +19,6 @@ from scheduler import (
     init_scheduler,
     shutdown_scheduler,
     trigger_refresh,
-    get_job_status,
 )
 from datetime import datetime, timedelta, timezone
 
@@ -109,6 +109,15 @@ def grading():
     return render_template("grading.html", available_types=available_types)
 
 
+# Mapping of type_id to scoring function
+SCORE_FUNCTIONS = {
+    "program01": program01score,
+    "program02": program02score,
+    "program03": program03score,
+    "program04": program04score,
+}
+
+
 @app.route("/grading/<type_id>")
 def grading_table(type_id):
     """Display grading table for a specific type."""
@@ -116,6 +125,9 @@ def grading_table(type_id):
 
     if type_id not in TEST_MAP:
         return "Invalid type", 404
+
+    # Get scoring function for this type
+    score_func = SCORE_FUNCTIONS.get(type_id)
 
     # Get all submissions for this type
     submissions = (
@@ -131,9 +143,25 @@ def grading_table(type_id):
     for sub in submissions:
         test_results = TestCaseResult.query.filter_by(submission_id=sub.id).all()
         results_dict = {shorten_testcase(tr.name): tr.outcome for tr in test_results}
+        if (
+            sub.project_id in submission_results
+            and sub.passed >= submission_results[sub.project_id]["submission"].passed
+        ):
+            # If multiple submissions exist for the same project_id,
+            # keep the one with the highest passed count
+            continue
+
+        # Calculate score if scoring function exists
+        score = None
+        if score_func:
+            # Convert results to bool dict for scoring function
+            input_data = {tr.name: tr.outcome == "passed" for tr in test_results}
+            score = score_func(input_data, sub)
+
         submission_results[sub.project_id] = {
             "submission": sub,
             "results": results_dict,
+            "score": score,
         }
         all_testcases.update(results_dict.keys())
 

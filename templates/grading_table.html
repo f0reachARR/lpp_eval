@@ -29,15 +29,15 @@
             z-index: 5;
         }
         .cell-passed {
-            background-color: #d1e7dd;
+            background-color: #d1e7dd !important;
             text-align: center;
         }
         .cell-failed {
-            background-color: #f8d7da;
+            background-color: #f8d7da !important;
             text-align: center;
         }
         .cell-not-submitted {
-            background-color: #e9ecef;
+            background-color: #e9ecef !important;
             text-align: center;
             color: #6c757d;
         }
@@ -57,16 +57,16 @@
             overflow: auto;
         }
         .timing-on_time {
-            background-color: #d1e7dd;
+            background-color: #d1e7dd !important;
         }
         .timing-resubmission {
-            background-color: #fff3cd;
+            background-color: #fff3cd !important;
         }
         .timing-late {
-            background-color: #f8d7da;
+            background-color: #f8d7da !important;
         }
         .timing-unknown {
-            background-color: #e9ecef;
+            background-color: #e9ecef !important;
         }
         .timing-badge {
             font-size: 0.7rem;
@@ -116,6 +116,7 @@
                         <th class="project-header">Project ID</th>
                         <th>Name</th>
                         <th>Timing</th>
+                        <th>Score</th>
                         <th>Total</th>
                         {% for tc in testcase_list %}
                         <th class="testcase-header" title="{{ tc }}">{{ tc }}</th>
@@ -152,6 +153,13 @@
                                 {% endif %}
                             {% else %}
                             未提出
+                            {% endif %}
+                        </td>
+                        <td class="summary-cell" style="text-align: center;">
+                            {% if data and data.score is not none %}
+                            {{ "%.1f"|format(data.score) }}
+                            {% else %}
+                            -
                             {% endif %}
                         </td>
                         <td class="summary-cell">
