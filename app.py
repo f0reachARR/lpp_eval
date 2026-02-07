@@ -2,7 +2,9 @@ from testcases import shorten_testcase
 from score import program01score, program02score, program03score, program04score
 import os
 import atexit
-from flask import Flask, render_template, jsonify, request
+import csv
+import io
+from flask import Flask, render_template, jsonify, request, Response
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -188,6 +190,193 @@ def grading_table(type_id):
         submission_results=submission_results,
         student_names=all_students,
         deadline=deadline,
+    )
+
+
+@app.route("/grading/all/csv")
+def grading_all_csv():
+    """Export grading data as CSV for all types combined."""
+    from grader import TEST_MAP
+
+    available_types = sorted(TEST_MAP.keys())
+
+    # Get all students
+    all_students = Student.get_all_students()
+    all_project_ids = set(Student.get_all_project_ids())
+
+    # Get deadlines for all types
+    all_deadlines = Deadline.get_all_deadlines()
+
+    # Timing labels
+    timing_labels = {
+        "on_time": "期限内",
+        "resubmission": "再提出",
+        "late": "遅延",
+        "unknown": "不明",
+    }
+
+    # Build results for each type
+    all_results = {}  # {type_id: {project_id: {submission, score}}}
+    for type_id in available_types:
+        score_func = SCORE_FUNCTIONS.get(type_id)
+        submissions = (
+            Submission.query.filter_by(type_id=type_id, status="completed")
+            .order_by(Submission.project_id)
+            .all()
+        )
+
+        submission_results = {}
+        for sub in submissions:
+            test_results = TestCaseResult.query.filter_by(submission_id=sub.id).all()
+            if (
+                sub.project_id in submission_results
+                and sub.passed < submission_results[sub.project_id]["submission"].passed
+            ):
+                continue
+
+            score = None
+            if score_func:
+                input_data = {tr.name: tr.outcome == "passed" for tr in test_results}
+                score = score_func(input_data, sub)
+
+            submission_results[sub.project_id] = {
+                "submission": sub,
+                "score": score,
+            }
+            all_project_ids.add(sub.project_id)
+
+        all_results[type_id] = submission_results
+
+    project_ids = sorted(all_project_ids)
+
+    # Create CSV in memory
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    # Write header: project_id, 氏名, then for each type: スコア, 提出状況
+    header = ["project_id", "氏名"]
+    for type_id in available_types:
+        header.append(f"{type_id}_スコア")
+        header.append(f"{type_id}_提出状況")
+    writer.writerow(header)
+
+    # Write data rows
+    for project_id in project_ids:
+        row = [project_id, all_students.get(project_id, "")]
+
+        for type_id in available_types:
+            deadline = all_deadlines.get(type_id)
+            sub_results = all_results[type_id]
+
+            if project_id in sub_results:
+                sub_data = sub_results[project_id]
+                score = sub_data["score"] if sub_data["score"] is not None else ""
+                timing = calculate_submission_timing(sub_data["submission"], deadline)
+                timing_label = timing_labels.get(timing, timing)
+            else:
+                score = ""
+                timing_label = "未提出"
+
+            row.append(score)
+            row.append(timing_label)
+
+        writer.writerow(row)
+
+    # Prepare response
+    output.seek(0)
+    return Response(
+        output.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-Disposition": "attachment; filename=all_grades.csv"},
+    )
+
+
+@app.route("/grading/<type_id>/csv")
+def grading_csv(type_id):
+    """Export grading data as CSV for a specific type."""
+    from grader import TEST_MAP
+
+    if type_id not in TEST_MAP:
+        return "Invalid type", 404
+
+    # Get scoring function for this type
+    score_func = SCORE_FUNCTIONS.get(type_id)
+
+    # Get all submissions for this type
+    submissions = (
+        Submission.query.filter_by(type_id=type_id, status="completed")
+        .order_by(Submission.project_id)
+        .all()
+    )
+
+    # Build submission results (best submission per project_id)
+    submission_results = {}
+    for sub in submissions:
+        test_results = TestCaseResult.query.filter_by(submission_id=sub.id).all()
+        if (
+            sub.project_id in submission_results
+            and sub.passed < submission_results[sub.project_id]["submission"].passed
+        ):
+            continue
+
+        # Calculate score if scoring function exists
+        score = None
+        if score_func:
+            input_data = {tr.name: tr.outcome == "passed" for tr in test_results}
+            score = score_func(input_data, sub)
+
+        submission_results[sub.project_id] = {
+            "submission": sub,
+            "score": score,
+        }
+
+    # Get all students and deadline
+    all_students = Student.get_all_students()
+    all_project_ids = Student.get_all_project_ids()
+    deadline = Deadline.get_deadline(type_id)
+
+    # Merge project IDs
+    project_ids_with_submissions = set(submission_results.keys())
+    all_project_ids_set = set(all_project_ids) | project_ids_with_submissions
+    project_ids = sorted(all_project_ids_set)
+
+    # Create CSV in memory
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    # Write header
+    writer.writerow(["project_id", "氏名", "スコア", "提出状況"])
+
+    # Write data rows
+    for project_id in project_ids:
+        name = all_students.get(project_id, "")
+
+        if project_id in submission_results:
+            sub_data = submission_results[project_id]
+            score = sub_data["score"] if sub_data["score"] is not None else ""
+            timing = calculate_submission_timing(sub_data["submission"], deadline)
+            # Convert timing to Japanese labels
+            timing_labels = {
+                "on_time": "期限内",
+                "resubmission": "再提出",
+                "late": "遅延",
+                "unknown": "不明",
+            }
+            timing_label = timing_labels.get(timing, timing)
+        else:
+            score = ""
+            timing_label = "未提出"
+
+        writer.writerow([project_id, name, score, timing_label])
+
+    # Prepare response
+    output.seek(0)
+    return Response(
+        output.getvalue(),
+        mimetype="text/csv",
+        headers={
+            "Content-Disposition": f"attachment; filename={type_id}_grades.csv"
+        },
     )
 
 

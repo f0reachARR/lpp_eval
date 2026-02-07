@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from typing import Dict, Optional
 
 from models import Submission
@@ -65,4 +66,26 @@ def program04score(input_data: Dict[str, bool], submission: Submission) -> float
     compile_score = 1 if can_compile else 0  # 1 point for compilation
     submission_score = 1  # 1 point for submission
     total_score = score + any_score_passed + compile_score + submission_score
+    return total_score
+
+
+@dataclass
+class TestResult:
+    summary: Dict[str, bool]
+    submission: Submission
+
+
+def grand_score(
+    input_data: Dict[str, TestResult],
+) -> float:
+    total_score = 0.0
+    for testsuite, test_result in input_data.items():
+        if testsuite == "program01":
+            total_score += program01score(test_result.summary, test_result.submission)
+        elif testsuite == "program02":
+            total_score += program02score(test_result.summary, test_result.submission)
+        elif testsuite == "program03":
+            total_score += program03score(test_result.summary, test_result.submission)
+        elif testsuite == "program04":
+            total_score += program04score(test_result.summary, test_result.submission)
     return total_score
