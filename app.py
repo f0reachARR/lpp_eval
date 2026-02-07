@@ -336,6 +336,33 @@ def api_get_submission_attachment(submission_id):
     return send_file(str(file_path), download_name=file_path.name)
 
 
+@app.route("/api/submission/<int:submission_id>/rerun", methods=["POST"])
+def api_rerun_submission(submission_id):
+    """Force re-run evaluation for a submission by setting status to pending."""
+    submission = Submission.query.get_or_404(submission_id)
+
+    # Delete existing test case results
+    TestCaseResult.query.filter_by(submission_id=submission_id).delete()
+
+    # Reset submission status to pending
+    submission.status = "pending"
+    submission.passed = 0
+    submission.total = 0
+    submission.failed = ""
+    submission.stdout = ""
+    submission.other_info = ""
+    db.session.commit()
+
+    # Trigger refresh to process immediately
+    trigger_refresh()
+
+    return jsonify({
+        "status": "success",
+        "message": f"Submission {submission_id} queued for re-evaluation",
+        "submission_id": submission_id,
+    })
+
+
 if __name__ == "__main__":
     init_scheduler(app)
     atexit.register(shutdown_scheduler)
