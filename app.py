@@ -293,7 +293,7 @@ def grading_all_csv():
 
 @app.route("/grading/<type_id>/csv")
 def grading_csv(type_id):
-    """Export grading data as CSV for a specific type."""
+    """Export grading data as CSV for a specific type (same content as grading_table)."""
     from grader import TEST_MAP
 
     if type_id not in TEST_MAP:
@@ -309,14 +309,19 @@ def grading_csv(type_id):
         .all()
     )
 
-    # Build submission results (best submission per project_id)
+    # Collect all unique test case names across all submissions
+    all_testcases = set()
     submission_results = {}
+
     for sub in submissions:
         test_results = TestCaseResult.query.filter_by(submission_id=sub.id).all()
+        results_dict = {shorten_testcase(tr.name): tr.outcome for tr in test_results}
         if (
             sub.project_id in submission_results
             and sub.passed < submission_results[sub.project_id]["submission"].passed
         ):
+            # If multiple submissions exist for the same project_id,
+            # keep the one with the highest passed count
             continue
 
         # Calculate score if scoring function exists
@@ -327,8 +332,13 @@ def grading_csv(type_id):
 
         submission_results[sub.project_id] = {
             "submission": sub,
+            "results": results_dict,
             "score": score,
         }
+        all_testcases.update(results_dict.keys())
+
+    # Sort test case names
+    testcase_list = sorted(all_testcases)
 
     # Get all students and deadline
     all_students = Student.get_all_students()
@@ -344,8 +354,9 @@ def grading_csv(type_id):
     output = io.StringIO()
     writer = csv.writer(output)
 
-    # Write header
-    writer.writerow(["project_id", "氏名", "スコア", "提出状況"])
+    # Write header (same columns as grading_table.html)
+    header = ["project_id", "氏名", "提出状況", "スコア", "Total"] + testcase_list
+    writer.writerow(header)
 
     # Write data rows
     for project_id in project_ids:
@@ -353,21 +364,37 @@ def grading_csv(type_id):
 
         if project_id in submission_results:
             sub_data = submission_results[project_id]
-            score = sub_data["score"] if sub_data["score"] is not None else ""
-            timing = calculate_submission_timing(sub_data["submission"], deadline)
+            sub = sub_data["submission"]
+            score = f"{sub_data['score']:.1f}" if sub_data["score"] is not None else "-"
+            timing = calculate_submission_timing(sub, deadline)
             # Convert timing to Japanese labels
             timing_labels = {
                 "on_time": "期限内",
                 "resubmission": "再提出",
-                "late": "遅延",
-                "unknown": "不明",
+                "late": "期限後",
+                "unknown": "-",
             }
             timing_label = timing_labels.get(timing, timing)
-        else:
-            score = ""
-            timing_label = "未提出"
+            total = f"{sub.passed}/{sub.total}"
 
-        writer.writerow([project_id, name, score, timing_label])
+            # Build test case results
+            testcase_results = []
+            for tc in testcase_list:
+                outcome = sub_data["results"].get(tc)
+                if outcome == "passed":
+                    testcase_results.append("○")
+                elif outcome == "failed":
+                    testcase_results.append("×")
+                else:
+                    testcase_results.append("-")
+        else:
+            score = "-"
+            timing_label = "未提出"
+            total = "-"
+            testcase_results = ["-"] * len(testcase_list)
+
+        row = [project_id, name, timing_label, score, total] + testcase_results
+        writer.writerow(row)
 
     # Prepare response
     output.seek(0)
