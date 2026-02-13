@@ -355,7 +355,14 @@ def grading_csv(type_id):
     writer = csv.writer(output)
 
     # Write header (same columns as grading_table.html)
-    header = ["project_id", "氏名", "提出状況", "スコア", "Total"] + testcase_list
+    header = [
+        "project_id",
+        "氏名",
+        "提出状況",
+        "スコア",
+        "Total",
+        "Testsuite",
+    ] + testcase_list
     writer.writerow(header)
 
     # Write data rows
@@ -367,6 +374,7 @@ def grading_csv(type_id):
             sub = sub_data["submission"]
             score = f"{sub_data['score']:.1f}" if sub_data["score"] is not None else "-"
             timing = calculate_submission_timing(sub, deadline)
+            testsuite = sub.testcase_id
             # Convert timing to Japanese labels
             timing_labels = {
                 "on_time": "期限内",
@@ -391,9 +399,17 @@ def grading_csv(type_id):
             score = "-"
             timing_label = "未提出"
             total = "-"
+            testsuite = "-"
             testcase_results = ["-"] * len(testcase_list)
 
-        row = [project_id, name, timing_label, score, total] + testcase_results
+        row = [
+            project_id,
+            name,
+            timing_label,
+            score,
+            total,
+            testsuite,
+        ] + testcase_results
         writer.writerow(row)
 
     # Prepare response
@@ -401,9 +417,7 @@ def grading_csv(type_id):
     return Response(
         output.getvalue(),
         mimetype="text/csv",
-        headers={
-            "Content-Disposition": f"attachment; filename={type_id}_grades.csv"
-        },
+        headers={"Content-Disposition": f"attachment; filename={type_id}_grades.csv"},
     )
 
 
@@ -572,11 +586,13 @@ def api_rerun_submission(submission_id):
     # Trigger refresh to process immediately
     trigger_refresh()
 
-    return jsonify({
-        "status": "success",
-        "message": f"Submission {submission_id} queued for re-evaluation",
-        "submission_id": submission_id,
-    })
+    return jsonify(
+        {
+            "status": "success",
+            "message": f"Submission {submission_id} queued for re-evaluation",
+            "submission_id": submission_id,
+        }
+    )
 
 
 if __name__ == "__main__":
