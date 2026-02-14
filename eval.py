@@ -18,7 +18,6 @@ def _call_container(target_path: Path, args: List[str], timeout=60):
 
     run_args = [
         "run",
-        "-it",
         "--rm",
         "-v",
         f"{target_path}:/workspaces",
