@@ -64,7 +64,7 @@ def run_extract(target_path: Path) -> Path:
         raise Exception("Multiple Makefiles found")
 
     ## Step2. Find c files and return most shortest path
-    c_files = list(target_path.glob("**/*.c"))
+    c_files = list(target_path.glob("**/*.c")) + list(target_path.glob("*.c"))
     c_files_dir = [c.parent for c in c_files]
     c_files_dir.sort(key=lambda x: len(x.parts))
 
