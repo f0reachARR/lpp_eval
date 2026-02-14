@@ -549,7 +549,7 @@ def api_get_submission_attachment(submission_id):
     submission = Submission.query.get_or_404(submission_id)
     from grader import get_submission_path
 
-    file_path = get_submission_path(submission.project_id, submission.type_id)
+    file_path = get_submission_path(submission.attachment_id, submission.type_id)
     if not file_path.exists():
         return jsonify({"status": "error", "message": "Attachment not found"}), 404
 

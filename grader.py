@@ -195,8 +195,8 @@ def check_and_register_issue(
         db.session.add(submission)
     db.session.commit()
 
-    # Download attachment
-    file_dir = OUTPUT_DIR / project_id / report_type
+    # Download attachment to attachment_id-based directory
+    file_dir = OUTPUT_DIR / attachment_id
     shutil.rmtree(file_dir, ignore_errors=True)
     file_dir.mkdir(parents=True, exist_ok=True)
     file_dir = file_dir.resolve()
@@ -216,16 +216,43 @@ def check_and_register_issue(
     return submission
 
 
+def _download_attachment(attachment_id: str, type_id: str) -> Path:
+    """Download an attachment from Redmine and return the file directory."""
+    redmine = get_redmine_client()
+    attachment = redmine.attachment.get(attachment_id)
+    file_dir = OUTPUT_DIR / attachment_id
+    shutil.rmtree(file_dir, ignore_errors=True)
+    file_dir.mkdir(parents=True, exist_ok=True)
+    file_dir = file_dir.resolve()
+    ext = EXT_MAP[type_id]
+    attachment.download(savepath=str(file_dir), filename=f"submission{ext}")
+    return file_dir
+
+
 def run_submission_tests(submission: Submission) -> Submission:
     """Run tests for a pending Submission and update results in DB.
 
-    Expects the submission's file to already be downloaded.
+    If the downloaded file is missing, re-downloads from Redmine.
     """
     submission.status = "running"
     db.session.commit()
 
-    file_dir = OUTPUT_DIR / submission.project_id / submission.type_id
-    file_dir = file_dir.resolve()
+    file_dir = (OUTPUT_DIR / submission.attachment_id).resolve()
+    ext = EXT_MAP[submission.type_id]
+    submission_file = file_dir / f"submission{ext}"
+
+    # Re-download if file is missing
+    if not submission_file.exists():
+        print(f"File missing, re-downloading: {submission.attachment_id}")
+        try:
+            file_dir = _download_attachment(submission.attachment_id, submission.type_id)
+        except Exception as e:
+            print(f"Failed to re-download attachment: {e}")
+            submission.status = "error"
+            submission.other_info = f"Download failed: {e}"
+            submission.evaluated_at = datetime.utcnow()
+            db.session.commit()
+            return submission
 
     # Extract source
     try:
@@ -382,7 +409,7 @@ def sync_students() -> List[Student]:
     return synced
 
 
-def get_submission_path(project_id: str, type_id: str) -> Path:
+def get_submission_path(attachment_id: str, type_id: str) -> Path:
     """Get the file path for a submission."""
     ext = EXT_MAP.get(type_id, "")
-    return OUTPUT_DIR / project_id / type_id / f"submission{ext}"
+    return OUTPUT_DIR / attachment_id / f"submission{ext}"
