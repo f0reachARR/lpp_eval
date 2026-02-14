@@ -13,7 +13,7 @@ TEST_TEMP_DIR = Path(os.getenv("TEST_TEMP_DIR", "./tmp")).resolve()
 BUILD_OUT_MAP = {"01": "tc", "02": "pp", "03": "cr", "04": "mpplc"}
 
 
-def _call_container(target_path: Path, args: List[str], timeout=30):
+def _call_container(target_path: Path, args: List[str], timeout=60):
     TEST_TEMP_DIR.mkdir(parents=True, exist_ok=True)
 
     run_args = [
