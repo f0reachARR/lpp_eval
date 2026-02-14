@@ -84,6 +84,17 @@ class Student(db.Model):
         return [s.project_id for s in students]
 
 
+class RedmineIssue(db.Model):
+    __tablename__ = "redmine_issues"
+
+    id = db.Column(db.Integer, primary_key=True)
+    issue_id = db.Column(db.Integer, nullable=False, unique=True)
+    updated_on = db.Column(db.DateTime, nullable=True)
+
+    def __repr__(self):
+        return f"<RedmineIssue {self.issue_id}>"
+
+
 class Deadline(db.Model):
     __tablename__ = "deadlines"
 

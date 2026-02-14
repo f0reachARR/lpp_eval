@@ -1,4 +1,3 @@
-import json
 import os
 import re
 import shutil
@@ -11,7 +10,7 @@ from redminelib import Redmine
 from redminelib.resources import Issue
 
 from eval import run_extract, run_tests
-from models import Submission, TestCaseResult, Student, db
+from models import Submission, TestCaseResult, Student, RedmineIssue, db
 
 load_dotenv()
 
@@ -102,8 +101,44 @@ def get_attachment_info(
     return latest_attachment_id, latest_created_on, first_created_on
 
 
-def process_single_issue(redmine: Redmine, issue: Issue) -> Optional[Submission]:
-    """Process a single issue and return a Submission object or None."""
+def _make_updated_on_naive(updated_on) -> Optional[datetime]:
+    """Convert updated_on to a naive datetime for comparison."""
+    if updated_on is None:
+        return None
+    if isinstance(updated_on, datetime):
+        if updated_on.tzinfo is not None:
+            return updated_on.replace(tzinfo=None)
+        return updated_on
+    return None
+
+
+def check_and_register_issue(
+    redmine: Redmine, issue: Issue, known_issues: Dict[int, Optional[datetime]]
+) -> Optional[Submission]:
+    """Check a Redmine issue for changes and register/update a Submission.
+
+    Compares the issue's updated_on against the stored value.
+    Downloads the attachment but does NOT run tests.
+    Returns the created/updated Submission, or None if no action needed.
+    """
+    issue_updated_on = _make_updated_on_naive(issue.updated_on)
+
+    # Check if this issue has changed since last check
+    if issue.id in known_issues:
+        stored = known_issues[issue.id]
+        if stored is not None and issue_updated_on is not None and stored == issue_updated_on:
+            return None
+
+    # Update RedmineIssue record
+    ri = RedmineIssue.query.filter_by(issue_id=issue.id).first()
+    if ri is None:
+        ri = RedmineIssue(issue_id=issue.id, updated_on=issue_updated_on)
+        db.session.add(ri)
+    else:
+        ri.updated_on = issue_updated_on
+    db.session.commit()
+
+    # Parse issue details
     detailed_issue = redmine.issue.get(issue.id, include=["journals"])
     project_name = detailed_issue.project.name
     match = PROJECT_REGEX.match(project_name)
@@ -139,9 +174,9 @@ def process_single_issue(redmine: Redmine, issue: Issue) -> Optional[Submission]
         print(f"Failed to get attachment: {e}")
         return None
 
-    print(f"Processing: {project_id} {report_type} {attachment.filename}")
+    print(f"Registering: {project_id} {report_type} {attachment.filename}")
 
-    # Create submission record (submission_timing is calculated at display time)
+    # Create or update submission record
     submission = (
         Submission(
             project_id=project_id,
@@ -149,12 +184,13 @@ def process_single_issue(redmine: Redmine, issue: Issue) -> Optional[Submission]
             attachment_id=attachment_id,
             submitted_at=submitted_at,
             first_submitted_at=first_submitted_at,
-            status="running",
+            status="pending",
         )
         if existing is None
         else existing
     )
-    submission.status = "running"
+    if existing is not None:
+        submission.status = "pending"
     if existing is None:
         db.session.add(submission)
     db.session.commit()
@@ -167,14 +203,31 @@ def process_single_issue(redmine: Redmine, issue: Issue) -> Optional[Submission]
     ext = EXT_MAP[report_type]
     attachment.download(savepath=str(file_dir), filename=f"submission{ext}")
 
-    # If not a program submission, mark as completed
+    # If not a program submission (report), mark as completed immediately
     if report_type not in TEST_MAP:
         submission.status = "completed"
         submission.evaluated_at = datetime.utcnow()
         db.session.commit()
+        print(f"Completed (report): {project_id}/{report_type}")
         return submission
 
-    # Run tests
+    # For program submissions, leave as pending for runner to pick up
+    print(f"Pending test: {project_id}/{report_type}")
+    return submission
+
+
+def run_submission_tests(submission: Submission) -> Submission:
+    """Run tests for a pending Submission and update results in DB.
+
+    Expects the submission's file to already be downloaded.
+    """
+    submission.status = "running"
+    db.session.commit()
+
+    file_dir = OUTPUT_DIR / submission.project_id / submission.type_id
+    file_dir = file_dir.resolve()
+
+    # Extract source
     try:
         root = run_extract(file_dir)
     except Exception as e:
@@ -188,7 +241,7 @@ def process_single_issue(redmine: Redmine, issue: Issue) -> Optional[Submission]
     test_results_dir = root / "test_results"
     shutil.rmtree(test_results_dir, ignore_errors=True)
 
-    test_names = TEST_MAP[report_type]
+    test_names = TEST_MAP[submission.type_id]
     best_result = (None, "", 0, [])
     all_result_info: List[str] = []
 
@@ -214,6 +267,9 @@ def process_single_issue(redmine: Redmine, issue: Issue) -> Optional[Submission]
         db.session.commit()
         return submission
 
+    # Clear old test case results if re-running
+    TestCaseResult.query.filter_by(submission_id=submission.id).delete()
+
     # Update submission with best results
     submission.testcase_id = best_result[1]
     submission.passed = best_result[2]
@@ -236,10 +292,29 @@ def process_single_issue(redmine: Redmine, issue: Issue) -> Optional[Submission]
 
     db.session.commit()
     print(
-        f"Completed: {project_id}/{report_type} - {best_result[2]}/{len(best_result[3])}"
+        f"Completed: {submission.project_id}/{submission.type_id} - {best_result[2]}/{len(best_result[3])}"
     )
 
     return submission
+
+
+def check_all_issues() -> List[Submission]:
+    """Check all Redmine issues for updates and register new/changed submissions."""
+    redmine = get_redmine_client()
+    known = {ri.issue_id: ri.updated_on for ri in RedmineIssue.query.all()}
+    issues: List[Issue] = redmine.issue.filter(tracker_id=15, status_id="*")
+    registered: List[Submission] = []
+
+    for issue in issues:
+        try:
+            submission = check_and_register_issue(redmine, issue, known)
+            if submission:
+                registered.append(submission)
+        except Exception as e:
+            print(f"Error checking issue {issue.id}: {e}")
+            continue
+
+    return registered
 
 
 def sync_students() -> List[Student]:
@@ -305,24 +380,6 @@ def sync_students() -> List[Student]:
             print(f"Synced student: {project_id} - {student_name}")
 
     return synced
-
-
-def process_submissions() -> List[Submission]:
-    """Process all pending submissions from Redmine."""
-    redmine = get_redmine_client()
-    issues: List[Issue] = redmine.issue.filter(tracker_id=15, status_id="*")
-    processed: List[Submission] = []
-
-    for issue in issues:
-        try:
-            submission = process_single_issue(redmine, issue)
-            if submission:
-                processed.append(submission)
-        except Exception as e:
-            print(f"Error processing issue {issue.id}: {e}")
-            continue
-
-    return processed
 
 
 def get_submission_path(project_id: str, type_id: str) -> Path:

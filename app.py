@@ -1,7 +1,6 @@
 from testcases import shorten_testcase
 from score import program01score, program02score, program03score, program04score
 import os
-import atexit
 import csv
 import io
 from flask import Flask, render_template, jsonify, request, Response
@@ -17,11 +16,7 @@ from models import (
     Student,
     calculate_submission_timing,
 )
-from scheduler import (
-    init_scheduler,
-    shutdown_scheduler,
-    trigger_refresh,
-)
+from grader import check_all_issues, sync_students
 from datetime import datetime, timedelta, timezone
 
 JST = timezone(timedelta(hours=9))
@@ -531,21 +526,19 @@ def api_get_students():
 @app.route("/api/students/sync", methods=["POST"])
 def api_sync_students():
     """Sync students from Redmine."""
-    from scheduler import trigger_sync_students
-
     try:
-        trigger_sync_students()
-        return jsonify({"status": "queued"})
+        synced = sync_students()
+        return jsonify({"status": "success", "synced": len(synced)})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
 @app.route("/api/refresh", methods=["POST"])
 def api_refresh():
-    """Queue a submission check job (non-blocking)."""
+    """Check Redmine for new/updated submissions and register them."""
     try:
-        trigger_refresh()
-        return jsonify({"status": "queued"})
+        registered = check_all_issues()
+        return jsonify({"status": "success", "registered": len(registered)})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
@@ -583,9 +576,6 @@ def api_rerun_submission(submission_id):
     submission.other_info = ""
     db.session.commit()
 
-    # Trigger refresh to process immediately
-    trigger_refresh()
-
     return jsonify(
         {
             "status": "success",
@@ -596,9 +586,6 @@ def api_rerun_submission(submission_id):
 
 
 if __name__ == "__main__":
-    init_scheduler(app)
-    atexit.register(shutdown_scheduler)
-
     debug = os.getenv("FLASK_DEBUG", "false").lower() == "true"
     port = int(os.getenv("FLASK_PORT", "5000"))
     app.run(debug=debug, port=port, use_reloader=False, host="0.0.0.0")
